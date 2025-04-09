@@ -118,7 +118,7 @@ async function getParametersForYtdlp (movie, ytDlp) {
   if (!ytDlp) ytDlp = new YTDlpWrap(path.join(__dirname, 'bin', 'yt-dlp'))
   const audioList = []
 
-  if (movie.channel === 'arte') {
+  if (['arte'].indexOf(movie.channel) > -1) {
     // ///////////////////////////////////////////////////// //
     //                          ARTE                         //
     //                                                       //
@@ -130,7 +130,7 @@ async function getParametersForYtdlp (movie, ytDlp) {
     logger.debug(rawInfo)
 
     // Add download parameters
-    if (rawInfo.indexOf(' audio only ') > -1 && rawInfo.indexOf(' video only ') > -1) {
+    if (rawInfo.indexOf(' audio only ') > -1) {
       const lines = rawInfo
         .split(/-{80,999}/)[1]
         .split('\n')
@@ -190,12 +190,29 @@ async function getParametersForYtdlp (movie, ytDlp) {
 
         // Add format options
         downloadOptions.push(formatOptionString)
+      } else if (audio.length === 1) {
+        // Format selector
+        downloadOptions.push('-f')
+        let formatOptionString = await getFfmpegVideoResolutionOption()
+
+        for (let i = 0; i < audio.length; i++) {
+          formatOptionString += `+${audio[i].id}`
+          audioList.push({ ...audio[i] })
+        }
+
+        // Add format options
+        downloadOptions.push(formatOptionString)
       }
     }
   } else if (['zdf', 'zdfneo'].indexOf(movie.channel) > -1) {
     // Get video info
     const info = await ytDlp.getVideoInfo(downloadOptions)
-    logger.debug(JSON.stringify(info))
+    if (process.env.NODE_ENV === 'development') {
+      await Bun.write(
+        path.join(movie.baseDownloadPath, `ytdlp_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
+        JSON.stringify(info)
+      )
+    }
 
     // Add download parameters
     // Check if audio only formats exist and download multi audiostreams if possible
@@ -212,34 +229,53 @@ async function getParametersForYtdlp (movie, ytDlp) {
     )
     logger.debug('[YT-DLP] Available audio languages:', audioOnlyLanguages)
 
-    if (audioOnlyFormats.length > 0 && audioOnlyLanguages.length > 1) {
-      // Enable multiple audio streams in final file
-      downloadOptions.push('--audio-multistreams')
-      // Format selector
-      downloadOptions.push('-f')
+    if (audioOnlyFormats.length > 0) {
+      if (audioOnlyLanguages.length > 1) {
+        // Enable multiple audio streams in final file
+        downloadOptions.push('--audio-multistreams')
+        // Format selector
+        downloadOptions.push('-f')
 
-      let formatOptionString = await getFfmpegVideoResolutionOption()
+        let formatOptionString = await getFfmpegVideoResolutionOption()
 
-      if (settings?.preferedDownloadLanguage) {
-        const preferedAudio = audioOnlyLanguages.filter(a => a.lang === settings.preferedDownloadLanguage)
-        for (let i = 0; i < preferedAudio.length; i++) {
-          formatOptionString += `+ba[language=${preferedAudio[i].lang}]`
-          audioList.push(preferedAudio[i])
+        if (settings?.preferedDownloadLanguage) {
+          const preferedAudio = audioOnlyLanguages.filter(a => a.lang === settings.preferedDownloadLanguage)
+          for (let i = 0; i < preferedAudio.length; i++) {
+            formatOptionString += `+ba[language=${preferedAudio[i].lang}]`
+            audioList.push(preferedAudio[i])
+          }
+          const remainingAudio = audioOnlyLanguages.filter(a => a.lang !== settings.preferedDownloadLanguage)
+          for (let i = 0; i < remainingAudio.length; i++) {
+            formatOptionString += `+ba[language=${remainingAudio[i].lang}]`
+            audioList.push(remainingAudio[i])
+          }
+        } else {
+          for (let i = 0; i < audioOnlyLanguages.length; i++) {
+            formatOptionString += `+ba[language=${audioOnlyLanguages[i].lang}]`
+            audioList.push(audioOnlyLanguages[i])
+          }
         }
-        const remainingAudio = audioOnlyLanguages.filter(a => a.lang !== settings.preferedDownloadLanguage)
-        for (let i = 0; i < remainingAudio.length; i++) {
-          formatOptionString += `+ba[language=${remainingAudio[i].lang}]`
-          audioList.push(remainingAudio[i])
-        }
-      } else {
+
+        // Add format options
+        downloadOptions.push(formatOptionString)
+      } else if (audioOnlyLanguages.length === 1) {
         for (let i = 0; i < audioOnlyLanguages.length; i++) {
-          formatOptionString += `+ba[language=${audioOnlyLanguages[i].lang}]`
           audioList.push(audioOnlyLanguages[i])
         }
       }
-
-      // Add format options
-      downloadOptions.push(formatOptionString)
+    } else {
+      const formats = [...info.formats].reverse()
+      const resolutionLimit = parseInt(settings.downloadResolutionLimit)
+      for (let i = 0; i < formats.length; i++) {
+        const format = formats[i]
+        if (format.height <= resolutionLimit) {
+          audioList.push({
+            id: format.format_id,
+            lang: format.language
+          })
+          i = Infinity
+        }
+      }
     }
   }
 
@@ -304,28 +340,37 @@ async function createAudioAndPostProcessingFiles (movie, audioList) {
     audioJson.push(audioEntry)
   }
 
-  await Bun.write(
-    path.join(movie.baseDownloadPath, `audio_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
-    JSON.stringify(audioJson)
-  )
+  if (process.env.NODE_ENV === 'development') {
+    await Bun.write(
+      path.join(movie.baseDownloadPath, `audio_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
+      JSON.stringify(audioJson)
+    )
+  }
 
   let substitudeString = ''
   for (let i = 0; i < audioJson.length; i++) {
     substitudeString += ` -metadata:s:a:${i} language=${audioJson[i].iso_639_2} -metadata:s:a:${i} title="${audioJson[i].title}"`
   }
 
-  let ffmpegAudioTitleString = `#!/bin/sh
+  const ffmpegAudioTitleString = `#!/bin/sh
 cd "${movie.baseDownloadPath}"
+
+for file in *.mp4 ; do
+  # get only file name without extention
+  filename="\${file%.*}"
+  # set the first audio track languages and titles
+  ffmpeg -i "$file" -map 0 -c copy${substitudeString} "$filename.audio_taged.mp4"
+  mv -v "$filename.audio_taged.mp4" "$file"
+done
 
 for file in *.mkv ; do
   # get only file name without extention
   filename="\${file%.*}"
-  # set the first audio track to english and the second one to german
+  # set the first audio track languages and titles
   ffmpeg -i "$file" -map 0 -c copy${substitudeString} "$filename.audio_taged.mkv"
   mv -v "$filename.audio_taged.mkv" "$file"
-done`
+done
 
-  ffmpegAudioTitleString += `
 for filename in *.vtt; do
   fname="\${filename%.*}"
   ffmpeg -i "$filename" "$fname.srt"
