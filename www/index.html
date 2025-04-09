@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/main.css">
+  <link rel="icon" href="/imgs/icon.png">
+  <title>Movie Downloader</title>
+  <!--for Apple devices-->
+  <meta name="apple-mobile-web-app-title" content="Movie Downloader" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#3B4252">
+  <meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+  <div id="app">
+    <div id="frame">
+      <div class="infoBox box" :class="msgType" v-show="msg" @click="msgType === 'processing' ? null : msg = null">
+        <svg v-if="msgType === 'processing'" class="processingIcon" width="1em" height="1em" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M1.90321 7.29677C1.90321 10.341 4.11041 12.4147 6.58893 12.8439C6.87255 12.893 7.06266 13.1627 7.01355 13.4464C6.96444 13.73 6.69471 13.9201 6.41109 13.871C3.49942 13.3668 0.86084 10.9127 0.86084 7.29677C0.860839 5.76009 1.55996 4.55245 2.37639 3.63377C2.96124 2.97568 3.63034 2.44135 4.16846 2.03202L2.53205 2.03202C2.25591 2.03202 2.03205 1.80816 2.03205 1.53202C2.03205 1.25588 2.25591 1.03202 2.53205 1.03202L5.53205 1.03202C5.80819 1.03202 6.03205 1.25588 6.03205 1.53202L6.03205 4.53202C6.03205 4.80816 5.80819 5.03202 5.53205 5.03202C5.25591 5.03202 5.03205 4.80816 5.03205 4.53202L5.03205 2.68645L5.03054 2.68759L5.03045 2.68766L5.03044 2.68767L5.03043 2.68767C4.45896 3.11868 3.76059 3.64538 3.15554 4.3262C2.44102 5.13021 1.90321 6.10154 1.90321 7.29677ZM13.0109 7.70321C13.0109 4.69115 10.8505 2.6296 8.40384 2.17029C8.12093 2.11718 7.93465 1.84479 7.98776 1.56188C8.04087 1.27898 8.31326 1.0927 8.59616 1.14581C11.4704 1.68541 14.0532 4.12605 14.0532 7.70321C14.0532 9.23988 13.3541 10.4475 12.5377 11.3662C11.9528 12.0243 11.2837 12.5586 10.7456 12.968L12.3821 12.968C12.6582 12.968 12.8821 13.1918 12.8821 13.468C12.8821 13.7441 12.6582 13.968 12.3821 13.968L9.38205 13.968C9.10591 13.968 8.88205 13.7441 8.88205 13.468L8.88205 10.468C8.88205 10.1918 9.10591 9.96796 9.38205 9.96796C9.65819 9.96796 9.88205 10.1918 9.88205 10.468L9.88205 12.3135L9.88362 12.3123C10.4551 11.8813 11.1535 11.3546 11.7585 10.6738C12.4731 9.86976 13.0109 8.89844 13.0109 7.70321Z" fill="currentColor"/>
+        </svg>
+        <span>{{ msg }}</span>
+        <svg class="closeIcon" width="20px" height="20px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10.0303 8.96965C9.73741 8.67676 9.26253 8.67676 8.96964 8.96965C8.67675 9.26255 8.67675 9.73742 8.96964 10.0303L10.9393 12L8.96966 13.9697C8.67677 14.2625 8.67677 14.7374 8.96966 15.0303C9.26255 15.3232 9.73743 15.3232 10.0303 15.0303L12 13.0607L13.9696 15.0303C14.2625 15.3232 14.7374 15.3232 15.0303 15.0303C15.3232 14.7374 15.3232 14.2625 15.0303 13.9696L13.0606 12L15.0303 10.0303C15.3232 9.73744 15.3232 9.26257 15.0303 8.96968C14.7374 8.67678 14.2625 8.67678 13.9696 8.96968L12 10.9393L10.0303 8.96965Z" fill="currentColor"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C6.06294 1.25 1.25 6.06294 1.25 12C1.25 17.9371 6.06294 22.75 12 22.75C17.9371 22.75 22.75 17.9371 22.75 12C22.75 6.06294 17.9371 1.25 12 1.25ZM2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <main id="content" v-cloak>
+        <div class="content" v-show="pageSelected === 'default'">
+          <section id="progress" v-show="inProgress.length > 0">
+            <h1>Aktive Downloads</h1>
+            <div class="inProgress">
+              <article v-for="movie in inProgress" :key="'progress_' + movie.apiID">
+                <header>
+                  <h2>{{ movie.title }}</h2>
+                </header>
+                <div class="done">
+                  <aside class="thumbnail">
+                    <image-intersection-fade-in-blured-bg :src="movie.info.img" :alt="movie.title + ' Thumbnail'"></image-intersection-fade-in-blured-bg>
+                  </aside>
+                  <main class="movieProgress">
+                    <p>{{ movie.info.description}}</p>
+                    <div v-if="progress[movie.apiID]">
+                      <div class="progressBar" :class="{ stats: showDownloadStats }">
+                        <div class="bar" :style="'width: ' + progress[movie.apiID].percent + '%;'"></div>
+                        <div class="stats">
+                          <span v-if="showDownloadStats">{{ progress[movie.apiID].percent }} %</span>
+                          <span v-else>{{ progress[movie.apiID].size }}</span>
+                        </div>
+                      </div>
+                      <div class="progressInfo">
+                        <span v-if="showDownloadStats">
+                          {{ progress[movie.apiID].size }} @ {{ progress[movie.apiID].speed }}
+                        </span>
+                        <span v-else>Loading &hellip;</span>
+                        <span class="spacer"></span>
+                        <span v-if="showDownloadStats">
+                          {{ progress[movie.apiID].eta }} ETA
+                        </span>
+                        <span v-else>{{ progress[movie.apiID].percent }} %</span>
+                      </div>
+                    </div>
+                    <div v-else>
+                      <p class="loadingText">
+                        <svg height="1em" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150">
+                          <path fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-dasharray="300 385" stroke-dashoffset="0" d="M275 75c0 31-27 50-50 50-58 0-92-100-150-100-28 0-50 22-50 50s23 50 50 50c58 0 92-100 150-100 24 0 50 19 50 50Z">
+                            <animate attributeName="stroke-dashoffset" calcMode="spline" dur="2.5" values="685;-685" keySplines="0 0 1 1" repeatCount="indefinite"></animate>
+                          </path>
+                        </svg><!--
+                        -->Download wird gestartet …
+                      </p>
+                    </div>
+                  </main>
+                </div>
+              </article>
+            </div>
+          </section>
+          <section id="schedule">
+            <h1>Geplante Downloads</h1>
+            <div class="list schedule">
+              <article v-for="movie in queue" :key="'queue_' + movie.apiID" :class="{ failed: movie.failed }">
+                <aside>
+                  <figure>
+                    <image-intersection-fade-in-blured-bg v-if="movie.info?.img" :src="movie.info?.img" :alt="movie.info?.title"></image-intersection-fade-in-blured-bg>
+                    <image-intersection-fade-in-blured-bg v-else src="/imgs/movie_image_placeholder.svg" alt="Kein Bild gefunden"></image-intersection-fade-in-blured-bg>
+                  </figure>
+                  <header>
+                    <h2>{{ movie.title }}</h2>
+                    <p>Download geplant für {{ new Date(movie.scheduleDates[movie.failCount]).toLocaleString('de-DE') }}</p>
+                  </header>
+                  <div class="infoWrapper" v-if="movie.info">
+                    <div>
+                      <div class="info">
+                        <div class="langs" v-if="movie.info.audioLangs">
+                          <span>Sprachen</span>
+                          <span v-for="lang in movie.info.audioLangs">{{ lang }}</span>
+                        </div>
+                        <div class="langs subs" v-if="movie.info.subLangs">
+                          <span>UT</span>
+                          <span v-for="lang in movie.info.subLangs">{{ lang }}</span>
+                        </div>
+                        <div class="combi">
+                          <div class="restrictions" v-if="movie.info.restrictions">
+                            <span :class="{ age6: restriction.indexOf('FSK6') > -1, age12: restriction.indexOf('FSK12') > -1, age16: restriction.indexOf('FSK16') > -1, age18: restriction.indexOf('FSK18') > -1, }" v-for="restriction in movie.info.restrictions">{{ restriction }}</span>
+                          </div>
+                          <div class="extra" v-if="movie.info.duration">
+                            <span>{{ movie.info.duration }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+                <main>
+                  <p v-if="movie.info">{{ movie.info.description }}</p>
+                  <div class="spacer"></div>
+                  <div class="actions">
+                    <img :src="'/logo/' + movie.channel + '.svg'" :alt="movie.channel">
+                    <div v-if="movie.failCount > 0 && !movie.failed" style="display: flex;align-items: center;">
+                      <span>Fail #{{ movie.failCount }}</span>
+                    </div>
+                    <div v-if="movie.failed" class="failInfo">
+                      <span>Download fehlgeschlagen!</span>
+                    </div>
+                    <div class="flexWrap">
+                      <a v-if="movie.info" :href="movie.info.url" target="_blank" class="button article">
+                        <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M15.197 3.35462C16.8703 1.67483 19.4476 1.53865 20.9536 3.05046C22.4596 4.56228 22.3239 7.14956 20.6506 8.82935L18.2268 11.2626M10.0464 14C8.54044 12.4882 8.67609 9.90087 10.3494 8.22108L12.5 6.06212" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                          <path d="M13.9536 10C15.4596 11.5118 15.3239 14.0991 13.6506 15.7789L11.2268 18.2121L8.80299 20.6454C7.12969 22.3252 4.55237 22.4613 3.0464 20.9495C1.54043 19.4377 1.67609 16.8504 3.34939 15.1706L5.77323 12.7373" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                      </a>
+                      <button class="button remove" @click="removeEntryFromSchedule(movie.apiID)">
+                        <svg width="2.4rem" height="2.4rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path fill-rule="evenodd" clip-rule="evenodd" d="M10.3094 2.25002H13.6908C13.9072 2.24988 14.0957 2.24976 14.2737 2.27819C14.977 2.39049 15.5856 2.82915 15.9146 3.46084C15.9978 3.62073 16.0573 3.79961 16.1256 4.00494L16.2373 4.33984C16.2562 4.39653 16.2616 4.41258 16.2661 4.42522C16.4413 4.90933 16.8953 5.23659 17.4099 5.24964C17.4235 5.24998 17.44 5.25004 17.5001 5.25004H20.5001C20.9143 5.25004 21.2501 5.58582 21.2501 6.00004C21.2501 6.41425 20.9143 6.75004 20.5001 6.75004H3.5C3.08579 6.75004 2.75 6.41425 2.75 6.00004C2.75 5.58582 3.08579 5.25004 3.5 5.25004H6.50008C6.56013 5.25004 6.5767 5.24998 6.59023 5.24964C7.10488 5.23659 7.55891 4.90936 7.73402 4.42524C7.73863 4.41251 7.74392 4.39681 7.76291 4.33984L7.87452 4.00496C7.94281 3.79964 8.00233 3.62073 8.08559 3.46084C8.41453 2.82915 9.02313 2.39049 9.72643 2.27819C9.90445 2.24976 10.093 2.24988 10.3094 2.25002ZM9.00815 5.25004C9.05966 5.14902 9.10531 5.04404 9.14458 4.93548C9.1565 4.90251 9.1682 4.86742 9.18322 4.82234L9.28302 4.52292C9.37419 4.24941 9.39519 4.19363 9.41601 4.15364C9.52566 3.94307 9.72853 3.79686 9.96296 3.75942C10.0075 3.75231 10.067 3.75004 10.3553 3.75004H13.6448C13.9331 3.75004 13.9927 3.75231 14.0372 3.75942C14.2716 3.79686 14.4745 3.94307 14.5842 4.15364C14.605 4.19363 14.626 4.2494 14.7171 4.52292L14.8169 4.82216L14.8556 4.9355C14.8949 5.04405 14.9405 5.14902 14.992 5.25004H9.00815Z" fill="currentColor"/>
+                          <path d="M5.91509 8.45015C5.88754 8.03685 5.53016 7.72415 5.11686 7.7517C4.70357 7.77925 4.39086 8.13663 4.41841 8.54993L4.88186 15.5017C4.96736 16.7844 5.03642 17.8205 5.19839 18.6336C5.36679 19.4789 5.65321 20.185 6.2448 20.7385C6.8364 21.2919 7.55995 21.5308 8.4146 21.6425C9.23662 21.7501 10.275 21.7501 11.5606 21.75H12.4395C13.7251 21.7501 14.7635 21.7501 15.5856 21.6425C16.4402 21.5308 17.1638 21.2919 17.7554 20.7385C18.347 20.185 18.6334 19.4789 18.8018 18.6336C18.9638 17.8206 19.0328 16.7844 19.1183 15.5017L19.5818 8.54993C19.6093 8.13663 19.2966 7.77925 18.8833 7.7517C18.47 7.72415 18.1126 8.03685 18.0851 8.45015L17.6251 15.3493C17.5353 16.6971 17.4713 17.6349 17.3307 18.3406C17.1943 19.025 17.004 19.3873 16.7306 19.6431C16.4572 19.8989 16.083 20.0647 15.391 20.1552C14.6776 20.2485 13.7376 20.25 12.3868 20.25H11.6134C10.2626 20.25 9.32255 20.2485 8.60915 20.1552C7.91715 20.0647 7.54299 19.8989 7.26958 19.6431C6.99617 19.3873 6.80583 19.025 6.66948 18.3406C6.52892 17.6349 6.46489 16.6971 6.37503 15.3493L5.91509 8.45015Z" fill="currentColor"/>
+                          <path d="M9.42546 10.2538C9.83762 10.2125 10.2052 10.5133 10.2464 10.9254L10.7464 15.9254C10.7876 16.3376 10.4869 16.7051 10.0747 16.7463C9.66256 16.7875 9.29503 16.4868 9.25381 16.0747L8.75381 11.0747C8.7126 10.6625 9.01331 10.295 9.42546 10.2538Z" fill="currentColor"/>
+                          <path d="M14.5747 10.2538C14.9869 10.295 15.2876 10.6625 15.2464 11.0747L14.7464 16.0747C14.7052 16.4868 14.3376 16.7875 13.9255 16.7463C13.5133 16.7051 13.2126 16.3376 13.2538 15.9254L13.7538 10.9254C13.795 10.5133 14.1626 10.2125 14.5747 10.2538Z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </main>
+              </article>
+            </div>
+          </section>
+        </div>
+        <div class="content" v-show="pageSelected === 'upcoming'">
+          <section id="addDownloadBox">
+            <article>
+              <header>
+                <h2>Film hinzufügen</h2>
+              </header>
+              <div class="box">
+                <div class="grp">
+                  <input v-on:keyup.13="addNewDownload" style="border: .1rem solid var(--green);" id="url" type="text" placeholder="Film URL von ZDF, ARD, 3sat, Arte oder SRF" v-model="downloadUrl">
+                  <button :disabled="msgType === 'processing'" @click="addNewDownload" class="download">
+                    <svg width="30px" height="30px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M12 12V19M12 19L9.75 16.6667M12 19L14.25 16.6667M6.6 17.8333C4.61178 17.8333 3 16.1917 3 14.1667C3 12.498 4.09438 11.0897 5.59198 10.6457C5.65562 10.6268 5.7 10.5675 5.7 10.5C5.7 7.46243 8.11766 5 11.1 5C14.0823 5 16.5 7.46243 16.5 10.5C16.5 10.5582 16.5536 10.6014 16.6094 10.5887C16.8638 10.5306 17.1284 10.5 17.4 10.5C19.3882 10.5 21 12.1416 21 14.1667C21 16.1917 19.3882 17.8333 17.4 17.8333"
+                        stroke="#000" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    Download
+                  </button>
+                </div>
+              </div>
+              <div class="box channelLinks">
+                <a href="https://www.zdf.de/filme/spielfilm-highlights" target="_blank">ZDF</a>
+                <a href="https://www.3sat.de/film/spielfilm" target="_blank">3sat</a>
+                <a href="https://www.ardmediathek.de/sammlung/neu-verfuegbare-filme/7QcfHyBWGAomKAYcSEYCe" target="_blank">ARD</a>
+                <a href="https://www.arte.tv/de/videos/kino/filme/" target="_blank">arte</a>
+                <a href="https://www.srf.ch/play/tv/themen/film" target="_blank">SRF</a>
+              </div>
+            </article>
+          </section>
+          <section v-for="channel in availableMovieMetaData" v-show="channelSelected === channel.channel" :id="channel.channel" :key="channel.channel">
+            <aside>
+              <h1>Verfügbare Filme {{ selectedChannelMovieCount }}/{{ movieCount }}</h1>
+            </aside>
+            <div class="availableList">
+              <article v-for="movie in channel?.movies" v-if="shouldShowMovie(movie.apiID)" :key="movie.apiID + movie.title?.replace(' ','_')">
+                <header>
+                  <h2>{{ movie.title }}</h2>
+                </header>
+                <aside>
+                  <figure>
+                    <image-intersection-fade-in-blured-bg :src="movie.img" :alt="movie.title"></image-intersection-fade-in-blured-bg>
+                  </figure>
+                  <div class="infoWrapper">
+                    <div>
+                      <div class="preText">
+                        {{ movie.preText }}
+                      </div>
+                      <div class="info">
+                        <div class="langs" v-if="movie.audioLangs">
+                          <span>Sprachen</span>
+                          <span v-for="lang in movie.audioLangs">{{ lang }}</span>
+                        </div>
+                        <div class="langs subs" v-if="movie.subLangs">
+                          <span>UT</span>
+                          <span v-for="lang in movie.subLangs">{{ lang }}</span>
+                        </div>
+                        <div class="combi">
+                          <div class="restrictions" v-if="movie.restrictions">
+                            <span :class="{ age6: restriction.indexOf('FSK6') > -1, age12: restriction.indexOf('FSK12') > -1, age16: restriction.indexOf('FSK16') > -1, age18: restriction.indexOf('FSK18') > -1, }" v-for="restriction in movie.restrictions">{{ restriction }}</span>
+                          </div>
+                          <div class="extra" v-if="movie.duration">
+                            <span>{{ movie.duration }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+                <main>
+                  <p>{{ movie.description }}</p>
+                  <div class="spacer"></div>
+                  <div class="actions">
+                    <div class="spacer"></div>
+                    <div style="display:flex;gap:1rem;">
+                      <a :href="movie.url" target="_blank" class="button" style="background-color: var(--blue1);color:#fff;">
+                        <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M15.197 3.35462C16.8703 1.67483 19.4476 1.53865 20.9536 3.05046C22.4596 4.56228 22.3239 7.14956 20.6506 8.82935L18.2268 11.2626M10.0464 14C8.54044 12.4882 8.67609 9.90087 10.3494 8.22108L12.5 6.06212" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                          <path d="M13.9536 10C15.4596 11.5118 15.3239 14.0991 13.6506 15.7789L11.2268 18.2121L8.80299 20.6454C7.12969 22.3252 4.55237 22.4613 3.0464 20.9495C1.54043 19.4377 1.67609 16.8504 3.34939 15.1706L5.77323 12.7373" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg><!--
+                        -->Beitrag
+                      </a>
+                      <button class="button" @click="addEntryToIgnoreList(movie, channel.channel)" style="background-color: var(--red);color:#fff;">
+                        Ignorieren
+                      </button>
+                      <button class="button" @click="addEntryToSchedule(movie, channel.channel)">
+                        {{ movie.time?.type === 'untill' ? 'Download' : 'Planen' }}
+                      </button>
+                    </div>
+                  </div>
+                </main>
+              </article>
+            </div>
+          </section>
+        </div>
+        <div class="content" v-show="pageSelected === 'completed'">
+          <section>
+            <article>
+              <div class="box">
+                <div class="grp flexGrp">
+                  <input v-model="searchFinishedDownloads" id="searchFinishedDownloads" type="text" placeholder="Search finished downloads …" style="border: .1rem solid var(--green);">
+                </div>
+              </div>
+            </article>
+          </section>
+          <section id="done">
+            <h1>Abgeschlossene Downloads</h1>
+            <div class="finishedDownloads">
+              <table>
+                <thead>
+                  <tr>
+                    <td>Channel</td>
+                    <td>Title</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td colspan="100"></td>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="movie in finishedMovies" :key="'done_' + movie.apiID">
+                    <td>
+                      <img :src="'/logo/' + movie.channel + '.svg'" :alt="movie.channel + ' Logo'">
+                    </td>
+                    <td>
+                      {{ movie.title }}
+                    </td>
+                    <td>
+                      {{ `${movie.date.toLocaleString()}`.split('T')[0] }}
+                    </td>
+                    <td>
+                      <button class="remove" @click="removeEntryFromFinished(movie.apiID)">
+                        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M4.99997 8H6.5M6.5 8V18C6.5 19.1046 7.39543 20 8.5 20H15.5C16.6046 20 17.5 19.1046 17.5 18V8M6.5 8H17.5M17.5 8H19M9 5H15M9.99997 11.5V16.5M14 11.5V16.5" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section id="ignoreList">
+            <h1>Ignore List</h1>
+            <div class="finishedDownloads">
+              <table>
+                <thead>
+                  <tr>
+                    <td>Channel</td>
+                    <td>Title</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td colspan="100" style="background-color: var(--red);"></td>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="movie in ignoreList" :key="'ignore_' + movie.apiID">
+                    <td>
+                      <img :src="'/logo/' + movie.channel + '.svg'" :alt="movie.channel + ' Logo'">
+                    </td>
+                    <td>
+                      {{ movie.title }}
+                    </td>
+                    <td>
+                      <button class="remove" @click="removeEntryFromIgnoreList(movie.apiID)">
+                        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M4.99997 8H6.5M6.5 8V18C6.5 19.1046 7.39543 20 8.5 20H15.5C16.6046 20 17.5 19.1046 17.5 18V8M6.5 8H17.5M17.5 8H19M9 5H15M9.99997 11.5V16.5M14 11.5V16.5" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+        <div class="content" v-show="pageSelected === 'extraInfo'">
+          <section id="extraInfo" class="extraInfo">
+            <h1>Nützliche Infos &amp; Skripte</h1>
+            <p>
+              ISO-639-2 Dreistellige Länder Codes. <a href="https://de.wikipedia.org/wiki/Liste_der_ISO-639-2-Codes">ISO-639-2 Codes (Wikipedia)</a>
+            </p>
+            <p>https://www.loc.gov/standards/iso639-2/php/code_list.php</p>
+          </section>
+        </div>
+        <div class="content" v-show="pageSelected === 'settings'">
+          <section id="settings">
+            <h1>Settings</h1>
+            <div class="settings">
+              <article>
+                <header>
+                  <h2>Downloader (yt-dlp)</h2>
+                </header>
+                <div class="box">
+                  <label class="top" for="maxDownloads">Max. zeitgleiche Downloads</label>
+                  <div class="flexGrp">
+                    <input type="number" id="maxDownloads" v-model="settings.maxDownloads">
+                  </div>
+                  <label class="top" for="maxDownloadRate">Max. download Rate je Download (0 = kein Limit)</label>
+                  <div class="flexGrp">
+                    <input type="number" id="maxDownloadRate" v-model="settings.maxDownloadRate"><!--
+                    --><select name="unit" id="unit" v-model="settings.maxDownloadRateUnit">
+                      <option value="K">KB/s</option>
+                      <option value="M">MB/s</option>
+                      <option value="G">GB/s</option>
+                    </select>
+                  </div>
+                  <label class="top">Max. Auflösung *</label>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="downloadResolutionLimit" id="downloadResolutionLimit1" value="none" v-model="settings.downloadResolutionLimit">
+                    <label for="downloadResolutionLimit1">Keine Begrenzung</label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="downloadResolutionLimit" id="downloadResolutionLimit2" value="360" v-model="settings.downloadResolutionLimit">
+                    <label for="downloadResolutionLimit2">Min <small>(640x360)</small></label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="downloadResolutionLimit" id="downloadResolutionLimit2" value="540" v-model="settings.downloadResolutionLimit">
+                    <label for="downloadResolutionLimit2">~SD <small>(960x540)</small></label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="downloadResolutionLimit" id="downloadResolutionLimit2" value="720" v-model="settings.downloadResolutionLimit">
+                    <label for="downloadResolutionLimit2">HD <small>(1280x720)</small></label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="downloadResolutionLimit" id="downloadResolutionLimit3" value="1080" v-model="settings.downloadResolutionLimit">
+                    <label for="downloadResolutionLimit3">FHD <small>(1920x1080)</small></label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="downloadResolutionLimit" id="downloadResolutionLimit4" value="2160" v-model="settings.downloadResolutionLimit">
+                    <label for="downloadResolutionLimit4">UHD/4K <small>(3840-4096x2160)</small></label>
+                  </div>
+                  <p>
+                    <small>
+                      * Achtung! Wenn das Video nur in einer höheren Auflösung verfügbar ist, schlägt der Download fehl.
+                    </small>
+                  </p>
+                  <label class="top">Ordner Namen</label>
+                  <div class="flexGrp flexSplit">
+                    <input type="checkbox" id="removeSpacesFromDirNames" v-model="settings.removeSpacesFromDirNames">
+                    <label for="removeSpacesFromDirNames">Ordner ohne Leerzeichen erstellen</label>
+                  </div>
+                  <p>
+                    <small>
+                      [HINWEIS] Alle Änderungen gelten nur für Downloads die nach der Änderung gestartet werden. Laufende
+                      Downloads können nicht beeinflusst werden! Wird der Server neu gestartet oder der Download
+                      abgebrochen, wird der Download bei neustart fortgesetzt, solange der Film/Video noch
+                      verfügbar ist. Beim Fortsetzen werden die dann geltenden Einstellungen berücksichtigt.
+                    </small>
+                  </p>
+                  <button class="button saveSettings" @click="saveSettings()">
+                    <svg width="2rem" height="2rem" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path id="Combined Shape" fill-rule="evenodd" clip-rule="evenodd" d="M35.2822 4.88487C34.7186 4.31826 33.9535 4 33.1551 4H6.99915C5.34286 4 3.99915 5.34372 3.99915 7V41C3.99915 42.6563 5.34286 44 6.99915 44H40.9991C42.6569 44 43.9991 42.6568 43.9991 41V14.888C43.9991 14.095 43.6861 13.3357 43.1261 12.7728L35.2822 4.88487ZM6.99915 6H12.9999V15.9508C12.9999 17.0831 13.9197 18.0028 15.0519 18.0028H32.9479C34.0802 18.0028 34.9999 17.0831 34.9999 15.9508V11.2048C34.9999 10.6525 34.5522 10.2048 33.9999 10.2048C33.4477 10.2048 32.9999 10.6525 32.9999 11.2048V15.9508C32.9999 15.9785 32.9757 16.0028 32.9479 16.0028H15.0519C15.0242 16.0028 14.9999 15.9785 14.9999 15.9508V6H33.1551C33.4211 6 33.6759 6.10599 33.8642 6.29523L41.7081 14.1831C41.8952 14.3712 41.9991 14.6234 41.9991 14.888V41C41.9991 41.5526 41.552 42 40.9991 42H6.99915C6.44743 42 5.99915 41.5517 5.99915 41V7C5.99915 6.44828 6.44743 6 6.99915 6ZM27.9999 30.0206C27.9999 27.8121 26.2089 26.0206 23.9999 26.0206C23.4477 26.0206 22.9999 25.5729 22.9999 25.0206C22.9999 24.4683 23.4477 24.0206 23.9999 24.0206C27.3136 24.0206 29.9999 26.7077 29.9999 30.0206C29.9999 33.3349 27.3142 36.0206 23.9999 36.0206C20.6857 36.0206 17.9999 33.3349 17.9999 30.0206C17.9999 29.4683 18.4477 29.0206 18.9999 29.0206C19.5522 29.0206 19.9999 29.4683 19.9999 30.0206C19.9999 32.2303 21.7902 34.0206 23.9999 34.0206C26.2097 34.0206 27.9999 32.2303 27.9999 30.0206Z" fill="currentColor"/>
+                    </svg><!--
+                    -->Speichern
+                  </button>
+                </div>
+              </article>
+              <article>
+                <header>
+                  <h2>Sprachen etc.</h2>
+                </header>
+                <div class="box">
+                  <label class="top">Beforzugte Audiosprache</label>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="preferedDownloadLanguage" id="ger" value="de" v-model="settings.preferedDownloadLanguage">
+                    <label for="ger">Deutsch</label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="preferedDownloadLanguage" id="eng" value="en" v-model="settings.preferedDownloadLanguage">
+                    <label for="eng">Englisch</label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="radio" name="preferedDownloadLanguage" id="fra" value="fr" v-model="settings.preferedDownloadLanguage">
+                    <label for="fra">Französisch</label>
+                  </div>
+                  <label class="top">Audio</label>
+                  <div class="flexGrp flexSplit">
+                    <input type="checkbox" id="includeAudioTranscription" v-model="settings.includeAudioTranscription">
+                    <label for="includeAudioTranscription">Tonspuren mit Audiotranskription herunterladen</label>
+                  </div>
+                  <div class="flexGrp flexSplit">
+                    <input type="checkbox" id="includeClearLanguage" v-model="settings.includeClearLanguage">
+                    <label for="includeClearLanguage">Tonspuren mit klarer Sprache herunterladen</label>
+                  </div>
+                  <label class="top">Untertitel</label>
+                  <div class="flexGrp flexSplit">
+                    <input type="checkbox" id="includeSubtitles" v-model="settings.includeSubtitles">
+                    <label for="includeSubtitles">Untertitel herunterladen</label>
+                  </div>
+                  <button class="button saveSettings" @click="saveSettings()">
+                    <svg width="2rem" height="2rem" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path id="Combined Shape" fill-rule="evenodd" clip-rule="evenodd" d="M35.2822 4.88487C34.7186 4.31826 33.9535 4 33.1551 4H6.99915C5.34286 4 3.99915 5.34372 3.99915 7V41C3.99915 42.6563 5.34286 44 6.99915 44H40.9991C42.6569 44 43.9991 42.6568 43.9991 41V14.888C43.9991 14.095 43.6861 13.3357 43.1261 12.7728L35.2822 4.88487ZM6.99915 6H12.9999V15.9508C12.9999 17.0831 13.9197 18.0028 15.0519 18.0028H32.9479C34.0802 18.0028 34.9999 17.0831 34.9999 15.9508V11.2048C34.9999 10.6525 34.5522 10.2048 33.9999 10.2048C33.4477 10.2048 32.9999 10.6525 32.9999 11.2048V15.9508C32.9999 15.9785 32.9757 16.0028 32.9479 16.0028H15.0519C15.0242 16.0028 14.9999 15.9785 14.9999 15.9508V6H33.1551C33.4211 6 33.6759 6.10599 33.8642 6.29523L41.7081 14.1831C41.8952 14.3712 41.9991 14.6234 41.9991 14.888V41C41.9991 41.5526 41.552 42 40.9991 42H6.99915C6.44743 42 5.99915 41.5517 5.99915 41V7C5.99915 6.44828 6.44743 6 6.99915 6ZM27.9999 30.0206C27.9999 27.8121 26.2089 26.0206 23.9999 26.0206C23.4477 26.0206 22.9999 25.5729 22.9999 25.0206C22.9999 24.4683 23.4477 24.0206 23.9999 24.0206C27.3136 24.0206 29.9999 26.7077 29.9999 30.0206C29.9999 33.3349 27.3142 36.0206 23.9999 36.0206C20.6857 36.0206 17.9999 33.3349 17.9999 30.0206C17.9999 29.4683 18.4477 29.0206 18.9999 29.0206C19.5522 29.0206 19.9999 29.4683 19.9999 30.0206C19.9999 32.2303 21.7902 34.0206 23.9999 34.0206C26.2097 34.0206 27.9999 32.2303 27.9999 30.0206Z" fill="currentColor"/>
+                    </svg><!--
+                    -->Speichern
+                  </button>
+                </div>
+              </article>
+              <article>
+                <header>
+                  <h2>Meta Daten Downloader</h2>
+                </header>
+                <div class="box">
+                  <p>
+                    Die Automatik läd zufällig zwischen 23 und 6 Uhr einmal Täglich die Daten.
+                  </p>
+                  <p v-if="nextMetaDataUpdateDate">
+                    Nächster geplanter Abruf: <b>{{ new Date(nextMetaDataUpdateDate).toLocaleString('de-DE') }}</b>
+                  </p>
+                  <p>
+                    Um die APIs nicht zu überladen, wird täglich um 6:01 Uhr eine zufällige neue Zeit für den Abruf generiert.
+                  </p>
+                  <p>
+                    Achtung: Einige APIs geben unvollständige Daten zurück,
+                    wenn innerhalb der Jugendschutz Zeiten abgerufen wird! (6-23 Uhr)
+                  </p>
+                  <p>
+                    Diese Aktion löscht alle gecachten Meta und EPG Daten und fragt alle informationen erneut an.
+                  </p>
+                  <button class="button forceReload" @click="forceMetaDataUpdate()">
+                    <svg width="2rem" height="2rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M18.364 3.05762C18.7782 3.05762 19.114 3.3934 19.114 3.80762V8.05026C19.114 8.46447 18.7782 8.80026 18.364 8.80026H14.1213C13.7071 8.80026 13.3713 8.46447 13.3713 8.05026C13.3713 7.63604 13.7071 7.30026 14.1213 7.30026H16.4817C13.6363 5.05718 9.4987 5.24825 6.87348 7.87348C4.04217 10.7048 4.04217 15.2952 6.87348 18.1265C9.70478 20.9578 14.2952 20.9578 17.1265 18.1265C19.0234 16.2297 19.6504 13.5428 19.0039 11.1219C18.897 10.7217 19.1348 10.3106 19.535 10.2038C19.9352 10.0969 20.3462 10.3347 20.4531 10.7349C21.2321 13.6518 20.478 16.8964 18.1872 19.1872C14.7701 22.6043 9.2299 22.6043 5.81282 19.1872C2.39573 15.7701 2.39573 10.2299 5.81282 6.81282C9.04483 3.5808 14.1762 3.40576 17.614 6.28768V3.80762C17.614 3.3934 17.9497 3.05762 18.364 3.05762Z" fill="currentColor"/>
+                    </svg><!--
+                    -->FORCE RELOAD
+                  </button>
+                </div>
+              </article>
+            </div>
+          </section>
+          <section id="info">
+            <h2>Info</h2>
+            <p>Version: {{ version }}</p>
+            <h2>Externe Ressourcen &amp; Dank</h2>
+
+            <h4>yt-dlp</h4>
+            <p>
+              Einen großen Dank an alle Kontributoren des yt-dlp Projektes, ohne die dieses Projekt nicht möglich wäre.<br>
+              <a target="_blank" href="https://github.com/yt-dlp/yt-dlp">https://github.com/yt-dlp/yt-dlp</a>
+            </p>
+
+            <h4>Menü Icons</h4>
+            <p>
+              Icons des Menüs sind von <a href="https://www.svgrepo.com" target="_blank">SVG Repo</a>, auch hier ein riesiger Dank an alle, die solch großartige Ressourcen frei zur Verfügung stellen!
+            </p>
+
+            <h4>Icon der WebApp/Favicon</h4>
+            <p>
+              <a target="_blank" href="https://www.flaticon.com/free-icons/download" title="download icons">Download icons created by iconixar - Flaticon</a><br>
+              <a target="_blank" href="https://www.flaticon.com/authors/iconixar">Weitere Icons des Authors "iconixar" auf Flaticon.</a>
+            </p>
+
+            <h4></h4>
+            <p>
+
+            </p>
+          </section>
+        </div>
+      </main>
+      <aside class="menu" role="menubar">
+        <div id="subMenu" :class="{ active: pageSelected === 'upcoming' }">
+          <nav>
+            <img v-for="entry in channelList" :src="'/logo/' + entry.channel + '.svg'"
+              :class="{ active: channelSelected === entry.channel }" :height="entry.logoHeight" :alt="entry.channel + ' Logo'"
+              @click="channelSelector(entry.channel)">
+          </nav>
+        </div>
+        <div id="menu">
+          <nav>
+            <div :class="{ active: pageSelected === 'default' }" @click="pageSelector('default')">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M17 14C17.5523 14 18 13.5523 18 13C18 12.4477 17.5523 12 17 12C16.4477 12 16 12.4477 16 13C16 13.5523 16.4477 14 17 14Z"
+                  fill="currentColor" />
+                <path
+                  d="M17 18C17.5523 18 18 17.5523 18 17C18 16.4477 17.5523 16 17 16C16.4477 16 16 16.4477 16 17C16 17.5523 16.4477 18 17 18Z"
+                  fill="currentColor" />
+                <path
+                  d="M13 13C13 13.5523 12.5523 14 12 14C11.4477 14 11 13.5523 11 13C11 12.4477 11.4477 12 12 12C12.5523 12 13 12.4477 13 13Z"
+                  fill="currentColor" />
+                <path
+                  d="M13 17C13 17.5523 12.5523 18 12 18C11.4477 18 11 17.5523 11 17C11 16.4477 11.4477 16 12 16C12.5523 16 13 16.4477 13 17Z"
+                  fill="currentColor" />
+                <path
+                  d="M7 14C7.55229 14 8 13.5523 8 13C8 12.4477 7.55229 12 7 12C6.44772 12 6 12.4477 6 13C6 13.5523 6.44772 14 7 14Z"
+                  fill="currentColor" />
+                <path
+                  d="M7 18C7.55229 18 8 17.5523 8 17C8 16.4477 7.55229 16 7 16C6.44772 16 6 16.4477 6 17C6 17.5523 6.44772 18 7 18Z"
+                  fill="currentColor" />
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M7 1.75C7.41421 1.75 7.75 2.08579 7.75 2.5V3.26272C8.412 3.24999 9.14133 3.24999 9.94346 3.25H14.0564C14.8586 3.24999 15.588 3.24999 16.25 3.26272V2.5C16.25 2.08579 16.5858 1.75 17 1.75C17.4142 1.75 17.75 2.08579 17.75 2.5V3.32709C18.0099 3.34691 18.2561 3.37182 18.489 3.40313C19.6614 3.56076 20.6104 3.89288 21.3588 4.64124C22.1071 5.38961 22.4392 6.33855 22.5969 7.51098C22.75 8.65018 22.75 10.1058 22.75 11.9435V14.0564C22.75 15.8941 22.75 17.3498 22.5969 18.489C22.4392 19.6614 22.1071 20.6104 21.3588 21.3588C20.6104 22.1071 19.6614 22.4392 18.489 22.5969C17.3498 22.75 15.8942 22.75 14.0565 22.75H9.94359C8.10585 22.75 6.65018 22.75 5.51098 22.5969C4.33856 22.4392 3.38961 22.1071 2.64124 21.3588C1.89288 20.6104 1.56076 19.6614 1.40314 18.489C1.24997 17.3498 1.24998 15.8942 1.25 14.0564V11.9436C1.24998 10.1058 1.24997 8.65019 1.40314 7.51098C1.56076 6.33855 1.89288 5.38961 2.64124 4.64124C3.38961 3.89288 4.33856 3.56076 5.51098 3.40313C5.7439 3.37182 5.99006 3.34691 6.25 3.32709V2.5C6.25 2.08579 6.58579 1.75 7 1.75ZM5.71085 4.88976C4.70476 5.02502 4.12511 5.27869 3.7019 5.7019C3.27869 6.12511 3.02502 6.70476 2.88976 7.71085C2.86685 7.88123 2.8477 8.06061 2.83168 8.25H21.1683C21.1523 8.06061 21.1331 7.88124 21.1102 7.71085C20.975 6.70476 20.7213 6.12511 20.2981 5.7019C19.8749 5.27869 19.2952 5.02502 18.2892 4.88976C17.2615 4.75159 15.9068 4.75 14 4.75H10C8.09318 4.75 6.73851 4.75159 5.71085 4.88976ZM2.75 12C2.75 11.146 2.75032 10.4027 2.76309 9.75H21.2369C21.2497 10.4027 21.25 11.146 21.25 12V14C21.25 15.9068 21.2484 17.2615 21.1102 18.2892C20.975 19.2952 20.7213 19.8749 20.2981 20.2981C19.8749 20.7213 19.2952 20.975 18.2892 21.1102C17.2615 21.2484 15.9068 21.25 14 21.25H10C8.09318 21.25 6.73851 21.2484 5.71085 21.1102C4.70476 20.975 4.12511 20.7213 3.7019 20.2981C3.27869 19.8749 3.02502 19.2952 2.88976 18.2892C2.75159 17.2615 2.75 15.9068 2.75 14V12Z"
+                  fill="currentColor" />
+              </svg>
+            </div>
+            <div :class="{ active: pageSelected === 'upcoming' }" @click="pageSelector('upcoming')">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M7 1.75C7.41421 1.75 7.75 2.08579 7.75 2.5V3.26272C8.41203 3.24999 9.1414 3.24999 9.94358 3.25H14.0564C14.8586 3.24999 15.588 3.24999 16.25 3.26272V2.5C16.25 2.08579 16.5858 1.75 17 1.75C17.4142 1.75 17.75 2.08579 17.75 2.5V3.32709C18.0099 3.34691 18.2561 3.37182 18.489 3.40313C19.6614 3.56076 20.6104 3.89288 21.3588 4.64124C22.1071 5.38961 22.4392 6.33855 22.5969 7.51098C22.6472 7.88567 22.681 8.29459 22.7037 8.74007C22.7337 8.82106 22.75 8.90861 22.75 9C22.75 9.06932 22.7406 9.13644 22.723 9.20016C22.75 10.0021 22.75 10.9128 22.75 11.9436V14C22.75 14.4142 22.4142 14.75 22 14.75C21.5858 14.75 21.25 14.4142 21.25 14V12C21.25 11.146 21.2497 10.4027 21.2369 9.75H2.76309C2.75032 10.4027 2.75 11.146 2.75 12V14C2.75 15.9068 2.75159 17.2615 2.88976 18.2892C3.02502 19.2952 3.27869 19.8749 3.7019 20.2981C4.12511 20.7213 4.70476 20.975 5.71085 21.1102C6.73851 21.2484 8.09318 21.25 10 21.25H14C14.4142 21.25 14.75 21.5858 14.75 22C14.75 22.4142 14.4142 22.75 14 22.75H9.94359C8.10583 22.75 6.65019 22.75 5.51098 22.5969C4.33856 22.4392 3.38961 22.1071 2.64124 21.3588C1.89288 20.6104 1.56076 19.6614 1.40314 18.489C1.24997 17.3498 1.24998 15.8942 1.25 14.0564V11.9436C1.24999 10.9127 1.24998 10.0021 1.27701 9.20017C1.25941 9.13645 1.25 9.06932 1.25 9C1.25 8.90862 1.26634 8.82105 1.29627 8.74006C1.31895 8.29458 1.35276 7.88566 1.40314 7.51098C1.56076 6.33856 1.89288 5.38961 2.64124 4.64124C3.38961 3.89288 4.33856 3.56076 5.51098 3.40313C5.7439 3.37182 5.99006 3.34691 6.25 3.32709V2.5C6.25 2.08579 6.58579 1.75 7 1.75ZM2.83168 8.25H21.1683C21.1523 8.06061 21.1331 7.88123 21.1102 7.71085C20.975 6.70476 20.7213 6.12511 20.2981 5.7019C19.8749 5.27869 19.2952 5.02502 18.2892 4.88976C17.2615 4.75159 15.9068 4.75 14 4.75H10C8.09318 4.75 6.73851 4.75159 5.71085 4.88976C4.70476 5.02502 4.12511 5.27869 3.7019 5.7019C3.27869 6.12511 3.02502 6.70476 2.88976 7.71085C2.86685 7.88123 2.8477 8.06061 2.83168 8.25ZM18 15.75C16.7574 15.75 15.75 16.7574 15.75 18C15.75 19.2426 16.7574 20.25 18 20.25C19.2426 20.25 20.25 19.2426 20.25 18C20.25 16.7574 19.2426 15.75 18 15.75ZM14.25 18C14.25 15.9289 15.9289 14.25 18 14.25C20.0711 14.25 21.75 15.9289 21.75 18C21.75 18.7643 21.5213 19.4752 21.1287 20.068L22.5303 21.4697C22.8232 21.7626 22.8232 22.2374 22.5303 22.5303C22.2374 22.8232 21.7626 22.8232 21.4697 22.5303L20.068 21.1287C19.4752 21.5213 18.7643 21.75 18 21.75C15.9289 21.75 14.25 20.0711 14.25 18Z"
+                  fill="currentColor" />
+              </svg>
+            </div>
+            <div :class="{ active: pageSelected === 'completed' }" @click="pageSelector('completed')">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M16 4C18.175 4.01211 19.3529 4.10856 20.1213 4.87694C21 5.75562 21 7.16983 21 9.99826V15.9983C21 18.8267 21 20.2409 20.1213 21.1196C19.2426 21.9983 17.8284 21.9983 15 21.9983H9C6.17157 21.9983 4.75736 21.9983 3.87868 21.1196C3 20.2409 3 18.8267 3 15.9983V9.99826C3 7.16983 3 5.75562 3.87868 4.87694C4.64706 4.10856 5.82497 4.01211 8 4"
+                  stroke="currentColor" stroke-width="1.5" />
+                <path d="M9 13.4L10.7143 15L15 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path
+                  d="M8 3.5C8 2.67157 8.67157 2 9.5 2H14.5C15.3284 2 16 2.67157 16 3.5V4.5C16 5.32843 15.3284 6 14.5 6H9.5C8.67157 6 8 5.32843 8 4.5V3.5Z"
+                  stroke="currentColor" stroke-width="1.5" />
+              </svg>
+            </div>
+            <div :class="{ active: pageSelected === 'extraInfo' }" @click="pageSelector('extraInfo')">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 17V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <circle cx="1" cy="1" r="1" transform="matrix(1 0 0 -1 11 9)" fill="currentColor" />
+                <path
+                  d="M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z"
+                  stroke="currentColor" stroke-width="1.5" />
+              </svg>
+            </div>
+            <div :class="{ active: pageSelected === 'settings' }" @click="pageSelector('settings')">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M12 8.25C9.92894 8.25 8.25 9.92893 8.25 12C8.25 14.0711 9.92894 15.75 12 15.75C14.0711 15.75 15.75 14.0711 15.75 12C15.75 9.92893 14.0711 8.25 12 8.25ZM9.75 12C9.75 10.7574 10.7574 9.75 12 9.75C13.2426 9.75 14.25 10.7574 14.25 12C14.25 13.2426 13.2426 14.25 12 14.25C10.7574 14.25 9.75 13.2426 9.75 12Z"
+                  fill="currentColor" />
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M11.9747 1.25C11.5303 1.24999 11.1592 1.24999 10.8546 1.27077C10.5375 1.29241 10.238 1.33905 9.94761 1.45933C9.27379 1.73844 8.73843 2.27379 8.45932 2.94762C8.31402 3.29842 8.27467 3.66812 8.25964 4.06996C8.24756 4.39299 8.08454 4.66251 7.84395 4.80141C7.60337 4.94031 7.28845 4.94673 7.00266 4.79568C6.64714 4.60777 6.30729 4.45699 5.93083 4.40743C5.20773 4.31223 4.47642 4.50819 3.89779 4.95219C3.64843 5.14353 3.45827 5.3796 3.28099 5.6434C3.11068 5.89681 2.92517 6.21815 2.70294 6.60307L2.67769 6.64681C2.45545 7.03172 2.26993 7.35304 2.13562 7.62723C1.99581 7.91267 1.88644 8.19539 1.84541 8.50701C1.75021 9.23012 1.94617 9.96142 2.39016 10.5401C2.62128 10.8412 2.92173 11.0602 3.26217 11.2741C3.53595 11.4461 3.68788 11.7221 3.68786 12C3.68785 12.2778 3.53592 12.5538 3.26217 12.7258C2.92169 12.9397 2.62121 13.1587 2.39007 13.4599C1.94607 14.0385 1.75012 14.7698 1.84531 15.4929C1.88634 15.8045 1.99571 16.0873 2.13552 16.3727C2.26983 16.6469 2.45535 16.9682 2.67758 17.3531L2.70284 17.3969C2.92507 17.7818 3.11058 18.1031 3.28089 18.3565C3.45817 18.6203 3.64833 18.8564 3.89769 19.0477C4.47632 19.4917 5.20763 19.6877 5.93073 19.5925C6.30717 19.5429 6.647 19.3922 7.0025 19.2043C7.28833 19.0532 7.60329 19.0596 7.8439 19.1986C8.08452 19.3375 8.24756 19.607 8.25964 19.9301C8.27467 20.3319 8.31403 20.7016 8.45932 21.0524C8.73843 21.7262 9.27379 22.2616 9.94761 22.5407C10.238 22.661 10.5375 22.7076 10.8546 22.7292C11.1592 22.75 11.5303 22.75 11.9747 22.75H12.0252C12.4697 22.75 12.8407 22.75 13.1454 22.7292C13.4625 22.7076 13.762 22.661 14.0524 22.5407C14.7262 22.2616 15.2616 21.7262 15.5407 21.0524C15.686 20.7016 15.7253 20.3319 15.7403 19.93C15.7524 19.607 15.9154 19.3375 16.156 19.1985C16.3966 19.0596 16.7116 19.0532 16.9974 19.2042C17.3529 19.3921 17.6927 19.5429 18.0692 19.5924C18.7923 19.6876 19.5236 19.4917 20.1022 19.0477C20.3516 18.8563 20.5417 18.6203 20.719 18.3565C20.8893 18.1031 21.0748 17.7818 21.297 17.3969L21.3223 17.3531C21.5445 16.9682 21.7301 16.6468 21.8644 16.3726C22.0042 16.0872 22.1135 15.8045 22.1546 15.4929C22.2498 14.7697 22.0538 14.0384 21.6098 13.4598C21.3787 13.1586 21.0782 12.9397 20.7378 12.7258C20.464 12.5538 20.3121 12.2778 20.3121 11.9999C20.3121 11.7221 20.464 11.4462 20.7377 11.2742C21.0783 11.0603 21.3788 10.8414 21.6099 10.5401C22.0539 9.96149 22.2499 9.23019 22.1547 8.50708C22.1136 8.19546 22.0043 7.91274 21.8645 7.6273C21.7302 7.35313 21.5447 7.03183 21.3224 6.64695L21.2972 6.60318C21.0749 6.21825 20.8894 5.89688 20.7191 5.64347C20.5418 5.37967 20.3517 5.1436 20.1023 4.95225C19.5237 4.50826 18.7924 4.3123 18.0692 4.4075C17.6928 4.45706 17.353 4.60782 16.9975 4.79572C16.7117 4.94679 16.3967 4.94036 16.1561 4.80144C15.9155 4.66253 15.7524 4.39297 15.7403 4.06991C15.7253 3.66808 15.686 3.2984 15.5407 2.94762C15.2616 2.27379 14.7262 1.73844 14.0524 1.45933C13.762 1.33905 13.4625 1.29241 13.1454 1.27077C12.8407 1.24999 12.4697 1.24999 12.0252 1.25H11.9747ZM10.5216 2.84515C10.5988 2.81319 10.716 2.78372 10.9567 2.76729C11.2042 2.75041 11.5238 2.75 12 2.75C12.4762 2.75 12.7958 2.75041 13.0432 2.76729C13.284 2.78372 13.4012 2.81319 13.4783 2.84515C13.7846 2.97202 14.028 3.21536 14.1548 3.52165C14.1949 3.61826 14.228 3.76887 14.2414 4.12597C14.271 4.91835 14.68 5.68129 15.4061 6.10048C16.1321 6.51968 16.9974 6.4924 17.6984 6.12188C18.0143 5.9549 18.1614 5.90832 18.265 5.89467C18.5937 5.8514 18.9261 5.94047 19.1891 6.14228C19.2554 6.19312 19.3395 6.27989 19.4741 6.48016C19.6125 6.68603 19.7726 6.9626 20.0107 7.375C20.2488 7.78741 20.4083 8.06438 20.5174 8.28713C20.6235 8.50382 20.6566 8.62007 20.6675 8.70287C20.7108 9.03155 20.6217 9.36397 20.4199 9.62698C20.3562 9.70995 20.2424 9.81399 19.9397 10.0041C19.2684 10.426 18.8122 11.1616 18.8121 11.9999C18.8121 12.8383 19.2683 13.574 19.9397 13.9959C20.2423 14.186 20.3561 14.29 20.4198 14.373C20.6216 14.636 20.7107 14.9684 20.6674 15.2971C20.6565 15.3799 20.6234 15.4961 20.5173 15.7128C20.4082 15.9355 20.2487 16.2125 20.0106 16.6249C19.7725 17.0373 19.6124 17.3139 19.474 17.5198C19.3394 17.72 19.2553 17.8068 19.189 17.8576C18.926 18.0595 18.5936 18.1485 18.2649 18.1053C18.1613 18.0916 18.0142 18.045 17.6983 17.8781C16.9973 17.5075 16.132 17.4803 15.4059 17.8995C14.68 18.3187 14.271 19.0816 14.2414 19.874C14.228 20.2311 14.1949 20.3817 14.1548 20.4784C14.028 20.7846 13.7846 21.028 13.4783 21.1549C13.4012 21.1868 13.284 21.2163 13.0432 21.2327C12.7958 21.2496 12.4762 21.25 12 21.25C11.5238 21.25 11.2042 21.2496 10.9567 21.2327C10.716 21.2163 10.5988 21.1868 10.5216 21.1549C10.2154 21.028 9.97201 20.7846 9.84514 20.4784C9.80512 20.3817 9.77195 20.2311 9.75859 19.874C9.72896 19.0817 9.31997 18.3187 8.5939 17.8995C7.86784 17.4803 7.00262 17.5076 6.30158 17.8781C5.98565 18.0451 5.83863 18.0917 5.73495 18.1053C5.40626 18.1486 5.07385 18.0595 4.81084 17.8577C4.74458 17.8069 4.66045 17.7201 4.52586 17.5198C4.38751 17.314 4.22736 17.0374 3.98926 16.625C3.75115 16.2126 3.59171 15.9356 3.4826 15.7129C3.37646 15.4962 3.34338 15.3799 3.33248 15.2971C3.28921 14.9684 3.37828 14.636 3.5801 14.373C3.64376 14.2901 3.75761 14.186 4.0602 13.9959C4.73158 13.5741 5.18782 12.8384 5.18786 12.0001C5.18791 11.1616 4.73165 10.4259 4.06021 10.004C3.75769 9.81389 3.64385 9.70987 3.58019 9.62691C3.37838 9.3639 3.28931 9.03149 3.33258 8.7028C3.34348 8.62001 3.37656 8.50375 3.4827 8.28707C3.59181 8.06431 3.75125 7.78734 3.98935 7.37493C4.22746 6.96253 4.3876 6.68596 4.52596 6.48009C4.66055 6.27983 4.74468 6.19305 4.81093 6.14222C5.07395 5.9404 5.40636 5.85133 5.73504 5.8946C5.83873 5.90825 5.98576 5.95483 6.30173 6.12184C7.00273 6.49235 7.86791 6.51962 8.59394 6.10045C9.31998 5.68128 9.72896 4.91837 9.75859 4.12602C9.77195 3.76889 9.80512 3.61827 9.84514 3.52165C9.97201 3.21536 10.2154 2.97202 10.5216 2.84515Z"
+                  fill="currentColor" />
+              </svg>
+            </div>
+          </nav>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+<script src="/socket.io/socket.io.js" type="text/javascript"></script>
+<script src="/vue.js" type="text/javascript"></script>
+<script src="/components/ImageIntersectionFadeIn.js" type="text/javascript"></script>
+<script src="/components/ImageIntersectionFadeInBluredBg.js" type="text/javascript"></script>
+<script>
+const app = new Vue({
+  el: '#app',
+  data: {
+    socket: null,
+    version: '0.0.0',
+
+    msgTimeoutFunction: null,
+    msgType: '',
+    msg: '',
+
+    channelSelected: 'zdf',
+
+    searchFinishedDownloads: '',
+
+    pageSelected: 'default',
+    lastPageSelected: 'default',
+    showDownloadStats: true,
+
+    downloadUrl: '',
+
+    ignoreList: [],
+    finishedMovies: [],
+    availableMovieMetaData: [],
+    schedule: [],
+    progress: {},
+
+    nextMetaDataUpdateDate: null,
+
+    settings: {}
+  },
+  created () {
+    this.socket = io()
+
+    this.socket.on('version', versionString => {
+      this.version = versionString
+    })
+    this.socket.on('settingsUpdate', settings => {
+      this.settings = settings
+    })
+
+    this.socket.on('bannerNotification', message => {
+      this.setMsg(message?.type, message?.msg)
+    })
+    this.socket.on('addDownloadUrltoScheduleResponse', status => {
+      if (!status.error) this.downloadUrl = ''
+      this.setMsg(status?.type, status?.msg)
+    })
+    this.socket.on('scheduleUpdate', schedule => {
+      this.schedule = schedule
+    })
+    this.socket.on('finishedMoviesUpdate', finishedMovies => {
+      this.finishedMovies = finishedMovies
+    })
+    this.socket.on('ignoreListUpdate', ignoreList => {
+      this.ignoreList = ignoreList
+    })
+    this.socket.on('downloadProgressUpdate', progress => {
+      this.progress = progress
+    })
+
+    this.socket.on('availableMovieMetaDataUpdate', availableMovieMetaData => {
+      this.availableMovieMetaData = availableMovieMetaData
+    })
+    this.socket.on('nextMetaDataUpdateDate', nextMetaDataUpdateDate => {
+      this.nextMetaDataUpdateDate = nextMetaDataUpdateDate
+    })
+  },
+  computed: {
+    scheduleEntries () {
+      const fullSchedule = []
+
+      for (let i = 0; i < this.schedule.length; i++) {
+        const movie = this.schedule[i]
+        if (!movie.info) {
+          try {
+            const info = this.getMovieFromChannelByID(movie.apiID, movie.channel)
+            if (info) movie.info = info
+          } catch (err) {
+            console.error(err)
+          }
+        }
+
+        fullSchedule.push(movie)
+      }
+
+      return fullSchedule
+    },
+    queue () {
+      return this.scheduleEntries.filter(entry => !entry.inProgress)
+    },
+    inProgress () {
+      return this.schedule.filter(entry => entry.inProgress).map(item => {
+        try {
+          const info = this.getMovieFromChannelByID(item.apiID, item.channel)
+          if (info) item.info = info
+        } catch (err) {
+          console.error(err)
+        }
+        return item
+      })
+    },
+    failed () {
+      return this.schedule.filter(entry => entry.failed && !entry.inProgress)
+    },
+    done () {
+      return this.schedule.filter(entry => entry.done).filter(entry => entry.title.toLowerCase().indexOf(this.searchFinishedDownloads.toLowerCase()) > -1)
+    },
+    hideFromUpcomingList () {
+      return [
+        ...this.queue.map(x => x.apiID),
+        ...this.inProgress.map(x => x.apiID),
+        ...this.failed.map(x => x.apiID),
+        ...this.done.map(x => x.apiID),
+        ...this.finishedMovies.map(x => x.apiID),
+        ...this.ignoreList.map(x => x.apiID)
+      ]
+    },
+    movieCount () {
+      return this.availableMovieMetaData.map(channel => channel?.movies?.length).reduce((a, b) => a + b, 0) || 0
+    },
+    selectedChannelMovieCount () {
+      const counts = {}
+      for (let i = 0; i < this.availableMovieMetaData.length; i++) {
+        const data = this.availableMovieMetaData[i]
+        counts[data?.channel] = data?.movies?.length || 0
+      }
+      return counts[this.channelSelected]
+    },
+    channelList () {
+      const channels = this.availableMovieMetaData.length > 0
+      if (channels) {
+        const list = []
+
+        for (let i = 0; i < this.availableMovieMetaData.length; i++) {
+          const entry = this.availableMovieMetaData[i]
+          list.push({
+            channel: entry.channel,
+            logo: entry.logo,
+            logoHeight: entry.channel === 'arte' ? '16px' : '22px',
+          })
+        }
+        return list
+      }
+
+      return []
+    },
+  },
+  methods: {
+    setMsg (type, msg) {
+      if (this.msgTimeoutFunction) {
+        clearTimeout(this.msgTimeoutFunction)
+        this.msgTimeoutFunction = null
+      }
+
+      this.msgType = type || ''
+      this.msg = msg || ''
+
+      if (this.msgType && this.msg && this.msgType !== 'processing') {
+        this.msgTimeoutFunction = setTimeout(() => {
+          this.msgType = ''
+          this.msg = ''
+          clearTimeout(this.msgTimeoutFunction)
+          this.msgTimeoutFunction = null
+        }, 5000)
+      }
+    },
+    pageSelector (pageName) {
+      if (pageName) {
+        this.lastPageSelected = `${this.pageSelected}`
+        this.pageSelected = pageName
+      } else {
+        this.pageSelected = `${this.lastPageSelected}`
+      }
+      window.scrollTo(0, 0)
+    },
+    channelSelector (channel) {
+      if (this.channelSelected !== channel) {
+        this.channelSelected = channel
+        // setTimeout(() => {
+          const offset = document.getElementById('addDownloadBox').offsetHeight
+          // window.scrollTo({top: offset + 50, behavior:'smooth'})
+          window.scrollTo({top: offset + 50})
+        // }, 0)
+      }
+    },
+    forceMetaDataUpdate () {
+      if (this.forceRefreshTimeout) return console.error('Ein erzwungener Abruf der Film Metadaten ist nur alle 30 Sekunden erlaubt!')
+
+      this.forceRefreshTimeout = true
+      setTimeout(() => {
+        this.forceRefreshTimeout = false
+      }, 30000);
+      this.socket.emit('forceMetaDataUpdate')
+    },
+
+    // SETTINGS
+    saveSettings () {
+      this.socket.emit('updateSettings', this.settings)
+    },
+
+    // SCHDULE
+    getMovieFromChannelByID (apiID, channel) {
+      try {
+        const channelData = this.availableMovieMetaData.filter(x => x.channel === channel)[0].movies
+        const movieData = channelData.filter(x => x.apiID === apiID)[0]
+        return movieData
+      } catch (err) {
+        console.error(err)
+        console.error('Es konnte kein Film mit den angebenen Daten ermittelt werden!')
+        return null
+      }
+    },
+
+    addNewDownload () {
+      if (this.msgType === 'processing') return
+      if (this.downloadUrl) {
+        this.socket.emit('addDownloadUrltoSchedule', { movieUrl: this.downloadUrl })
+      } else {
+        this.msgType = 'error'
+        this.msg = 'No Url given.'
+      }
+    },
+    addEntryToSchedule (movie, channel) {
+      this.setMsg('processing', `Verarbeite Anfrage für Download von "${movie.title}".`)
+      this.socket.emit('addEntryToSchedule', movie.apiID, channel)
+    },
+    addNewDownloadByUrl (downloadUrl, title) {
+      if (this.msgType === 'processing') return
+      if (downloadUrl) {
+        this.msgType = 'processing'
+        this.msg = `Processing "${title || downloadUrl}" …`
+        this.socket.emit('addDownloadUrltoSchedule', { movieUrl: downloadUrl, title })
+      } else {
+        this.msgType = 'error'
+        this.msg = 'No Url given.'
+      }
+    },
+    removeEntryFromSchedule (apiID) {
+      if (apiID) this.socket.emit('removeEntryFromSchedule', apiID)
+    },
+    shouldShowMovie (apiID) {
+      return this.hideFromUpcomingList?.indexOf(apiID) === -1
+    },
+    removeEntryFromFinished (apiID) {
+      if (apiID) this.socket.emit('removeEntryFromFinished', apiID)
+    },
+    addEntryToIgnoreList (movie,channel) {
+      this.socket.emit('addEntryToIgnoreList', {
+        apiID: movie.apiID,
+        title: movie.title,
+        channel: channel
+      })
+    },
+    removeEntryFromIgnoreList (apiID) {
+      if (apiID) this.socket.emit('removeEntryFromIgnoreList', apiID)
+    },
+  },
+})
+</script>
+<script src="/splash-screen.js"></script>
+<script>iosPWASplash('/imgs/icon.png', '#2E3440');</script>
+</html>
