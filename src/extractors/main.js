@@ -8,19 +8,14 @@ async function getAvailableMovieMetaDataFromApis () {
     const cache = {}
 
     const zdfApiData = await zdfExtractor.scrapeMovieData()
-    logger.debug(zdfApiData)
-    if (zdfApiData?.zdf) {
-      cache.zdf = {
-        channel: 'zdf',
-        updated: new Date(),
-        movies: zdfApiData.zdf
-      }
-    }
-    if (zdfApiData?.zdfneo) {
-      cache.zdfneo = {
-        channel: 'zdfneo',
-        updated: new Date(),
-        movies: zdfApiData.zdfneo
+    const zdfApiDataChannels = Object.keys(zdfApiData)
+    for (let i = 0; i < zdfApiDataChannels.length; i++) {
+      if (zdfApiData[zdfApiDataChannels[i]]) {
+        cache[zdfApiDataChannels[i]] = {
+          channel: zdfApiDataChannels[i],
+          updated: new Date(),
+          movies: zdfApiData[zdfApiDataChannels[i]]
+        }
       }
     }
 
@@ -42,14 +37,7 @@ async function getAvailableMovieMetaDataFromApis () {
       }
     }
 
-    const updateArray = []
-    if (cache.zdf) updateArray.push(cache.zdf)
-    if (cache.zdfneo) updateArray.push(cache.zdfneo)
-    if (cache['3sat']) updateArray.push(cache['3sat'])
-    if (cache.ard) updateArray.push(cache.ard)
-    if (cache.arte) updateArray.push(cache.arte)
-
-    return updateArray
+    return Object.values(cache)
   } catch (err) {
     logger.error(err)
   }

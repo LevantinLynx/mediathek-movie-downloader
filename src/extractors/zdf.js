@@ -46,7 +46,7 @@ async function scrapeZdfMovieData () {
     })
     // HACK UNTILL YT-DLP IS FIXED END
 
-    const channels = _.uniq(movieList.map(movie => movie.channel))
+    const channels = _.uniq(movieList.map(movie => movie.channel)).sort()
     logger.debug(channels, movieList.map(x => x.url))
     const dataByChannel = {}
     for (let i = 0; i < channels.length; i++) {
