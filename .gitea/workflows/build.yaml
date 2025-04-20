@@ -1,0 +1,49 @@
+name: Build and release
+run-name: Build and release mediathek-movie-downloader docker container on release tag push
+on:
+  push:
+    tags:
+      - '*-release*'
+
+jobs:
+  release_build:
+    run-on: ubuntu-latest
+    steps:
+      - # https://github.com/actions/checkout
+        name: Checkout
+        uses: actions/checkout@v4
+      - # https://github.com/docker/setup-qemu-action
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - # https://github.com/docker/setup-buildx-action
+        name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+      - # https://github.com/docker/login-action
+        name: Login to Gitea Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERREGISTRY_USERNAME }}
+          password: ${{ secrets.DOCKERREGISTRY_PASSWORD }}
+      -
+        name: Get npm package version for release tag
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@v1.3.1
+      -
+        name: Build container and push to registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: levantinlynx/mediathek-movie-downloader:latest,levantinlynx/mediathek-movie-downloader:${{ steps.package-version.outputs.current-version }}
+      -
+        name: Actions Ntfy
+        run: |
+          curl \
+            -H "Authorization: Bearer ${{ secrets.NTFY_TOKEN }}" \
+            -H "Tags: package,building_construction" \
+            -H "Title: Container Build ${{ job.status }}" \
+            -H "Content-Type: text/plain" \
+            -d $'Repo: ${{ github.repository }}\nVersion: ${{ steps.package-version.outputs.current-version }}\nCommit: ${{ github.sha }}\nRef: ${{ github.ref }}\nStatus: ${{ job.status }}' \
+            ${{ vars.NTFY_URL }}
