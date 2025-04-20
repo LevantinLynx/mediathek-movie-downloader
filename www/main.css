@@ -253,6 +253,8 @@ b {
 #subMenu nav {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 2rem;
 }
 #subMenu nav img.active {
@@ -490,6 +492,10 @@ article .failInfo {
   background-color: var(--dark3);
 
   border-radius: .3rem;
+}
+.infoWrapper .restrictions .age6 {
+  background-color: var(--green);
+  color: #000;
 }
 .infoWrapper .restrictions .age12 {
   background-color: var(--yellow);

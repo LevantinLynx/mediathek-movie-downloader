@@ -204,7 +204,7 @@ async function getParametersForYtdlp (movie, ytDlp) {
         downloadOptions.push(formatOptionString)
       }
     }
-  } else if (['zdf', 'zdfneo'].indexOf(movie.channel) > -1) {
+  } else if (['zdf', 'zdfneo', '3sat'].indexOf(movie.channel) > -1) {
     // Get video info
     const info = await ytDlp.getVideoInfo(downloadOptions)
     if (process.env.NODE_ENV === 'development') {
@@ -265,7 +265,7 @@ async function getParametersForYtdlp (movie, ytDlp) {
       }
     } else {
       const formats = [...info.formats].reverse()
-      const resolutionLimit = parseInt(settings.downloadResolutionLimit)
+      const resolutionLimit = parseInt(settings.downloadResolutionLimit) || 9999
       for (let i = 0; i < formats.length; i++) {
         const format = formats[i]
         if (format.height <= resolutionLimit) {
@@ -335,7 +335,10 @@ async function createAudioAndPostProcessingFiles (movie, audioList) {
 
       if (audioID.indexOf('_Audiodeskription_') > -1) audioEntry.title += ' (Audiodeskription)'
       else if (audioID.indexOf('_Klare_Sprache_') > -1) audioEntry.title += ' (klare Sprache)'
-      else if (audioID.indexOf('Originalton') > -1) audioEntry.title += ' (Originalton)'
+      else if (
+        audioID.indexOf('Originalton') > -1 ||
+        audioID.indexOf('_VO_') > -1
+      ) audioEntry.title += ' (Originalton)'
     }
     audioJson.push(audioEntry)
   }
@@ -349,19 +352,12 @@ async function createAudioAndPostProcessingFiles (movie, audioList) {
 
   let substitudeString = ''
   for (let i = 0; i < audioJson.length; i++) {
-    substitudeString += ` -metadata:s:a:${i} language=${audioJson[i].iso_639_2} -metadata:s:a:${i} title="${audioJson[i].title}"`
+    substitudeString += ` -metadata:s:a:${i} language=${audioJson[i].iso_639_2}`
+    substitudeString += ` -metadata:s:a:${i} title="${audioJson[i].title}"`
   }
 
   const ffmpegAudioTitleString = `#!/bin/sh
 cd "${movie.baseDownloadPath}"
-
-for file in *.mp4 ; do
-  # get only file name without extention
-  filename="\${file%.*}"
-  # set the first audio track languages and titles
-  ffmpeg -i "$file" -map 0 -c copy${substitudeString} "$filename.audio_taged.mp4"
-  mv -v "$filename.audio_taged.mp4" "$file"
-done
 
 for file in *.mkv ; do
   # get only file name without extention
@@ -369,6 +365,15 @@ for file in *.mkv ; do
   # set the first audio track languages and titles
   ffmpeg -i "$file" -map 0 -c copy${substitudeString} "$filename.audio_taged.mkv"
   mv -v "$filename.audio_taged.mkv" "$file"
+done
+
+for file in *.mp4 ; do
+  # get only file name without extention
+  filename="\${file%.*}"
+  # set the first audio track languages and titles
+  ffmpeg -i "$file" -map 0 -c copy${substitudeString} "$filename.audio_taged.mkv"
+  mv -v "$filename.audio_taged.mkv" "$filename.mkv"
+  rm "$file"
 done
 
 for filename in *.vtt; do
