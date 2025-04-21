@@ -277,7 +277,6 @@ async function getAllSettings () {
     removeSpacesFromDirNames: false,
 
     downloadResolutionLimit: 'none',
-
     preferedDownloadLanguage: 'de',
     includeAudioTranscription: true,
     includeClearLanguage: true,

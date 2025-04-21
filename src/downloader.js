@@ -288,7 +288,12 @@ async function getParametersForYtdlp (movie, ytDlp) {
   }
 
   // Rate limit for download
-  downloadOptions.push(`--limit-rate=${settings.maxDownloadRate || '1'}${settings.maxDownloadRateUnit || 'M'}`)
+  if (
+    typeof settings.maxDownloadRate === 'number' &&
+    settings.maxDownloadRate > 0
+  ) {
+    downloadOptions.push(`--limit-rate=${settings.maxDownloadRate}${settings.maxDownloadRateUnit || 'M'}`)
+  }
   // Download all available subtitles
   if (settings?.includeSubtitles) downloadOptions.push('--all-subs')
 
