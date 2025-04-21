@@ -55,6 +55,10 @@ async function startMetaDataRefreshJob (isForced) {
   if (metaDataJobRunning) return logger.info('[SKIP] Meta data refresh job is currently running!')
 
   if (isForced) {
+    io.emit('bannerNotification', {
+      type: 'success',
+      msg: 'Erzwungenes neu laden der Meta Daten gestartet … dies dauert ~45 Sekunden.'
+    })
     try {
       await db.clearEpgCache()
     } catch (err) {

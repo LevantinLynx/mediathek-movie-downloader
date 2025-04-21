@@ -77,7 +77,7 @@
             </div>
           </section>
           <section id="schedule">
-            <h1>Geplante Downloads</h1>
+            <h1>Geplante Downloads <small>{{ queue.length }}</small></h1>
             <div class="list schedule">
               <article v-for="movie in queue" :key="'queue_' + movie.apiID" :class="{ failed: movie.failed }">
                 <aside>
@@ -148,7 +148,7 @@
         <div class="content" v-show="pageSelected === 'upcoming'">
           <section v-for="channel in availableMovieMetaData" v-show="channelSelected === channel.channel" :id="channel.channel" :key="channel.channel">
             <aside>
-              <h1>Verfügbare Filme {{ selectedChannelMovieCount }}/{{ movieCount }}</h1>
+              <h1>Verfügbare Filme <small>{{ selectedChannelMovieCount }}/{{ movieCount }}</small></h1>
             </aside>
             <div class="availableList">
               <article v-for="movie in channel?.movies" v-if="shouldShowMovie(movie.apiID)" :key="movie.apiID + movie.title?.replace(' ','_')">
@@ -216,13 +216,13 @@
             <article>
               <div class="box">
                 <div class="grp flexGrp">
-                  <input v-model="searchFinishedDownloads" id="searchFinishedDownloads" type="text" placeholder="Search finished downloads …" style="border: .1rem solid var(--green);">
+                  <input v-model="searchFinishedDownloads" id="searchFinishedDownloads" type="text" placeholder="Listen durchsuchen  …" style="border: .1rem solid var(--green);">
                 </div>
               </div>
             </article>
           </section>
           <section id="done">
-            <h1>Abgeschlossene Downloads</h1>
+            <h1>Abgeschlossene Downloads <small>{{ finishedMovies.length }}</small></h1>
             <div class="finishedDownloads">
               <table>
                 <thead>
@@ -237,7 +237,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="movie in finishedMovies" :key="'done_' + movie.apiID">
+                  <tr v-for="movie in finishedMoviesFiltered" :key="'done_' + movie.apiID">
                     <td>
                       <img :src="'/logo/' + movie.channel + '.svg'" :alt="movie.channel + ' Logo'">
                     </td>
@@ -260,7 +260,7 @@
             </div>
           </section>
           <section id="ignoreList">
-            <h1>Ignore List</h1>
+            <h1>Ignore List <small>{{ ignoreListFiltered.length }}</small></h1>
             <div class="finishedDownloads">
               <table>
                 <thead>
@@ -274,7 +274,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="movie in ignoreList" :key="'ignore_' + movie.apiID">
+                  <tr v-for="movie in ignoreListFiltered" :key="'ignore_' + movie.apiID">
                     <td>
                       <img :src="'/logo/' + movie.channel + '.svg'" :alt="movie.channel + ' Logo'">
                     </td>
@@ -664,15 +664,17 @@ const app = new Vue({
     failed () {
       return this.schedule.filter(entry => entry.failed && !entry.inProgress)
     },
-    done () {
-      return this.schedule.filter(entry => entry.done).filter(entry => entry.title.toLowerCase().indexOf(this.searchFinishedDownloads.toLowerCase()) > -1)
+    finishedMoviesFiltered () {
+      return this.finishedMovies.filter(entry => entry.title.toLowerCase().indexOf(this.searchFinishedDownloads.toLowerCase()) > -1)
+    },
+    ignoreListFiltered () {
+      return this.ignoreList.filter(entry => entry.title.toLowerCase().indexOf(this.searchFinishedDownloads.toLowerCase()) > -1)
     },
     hideFromUpcomingList () {
       return [
         ...this.queue.map(x => x.apiID),
         ...this.inProgress.map(x => x.apiID),
         ...this.failed.map(x => x.apiID),
-        ...this.done.map(x => x.apiID),
         ...this.finishedMovies.map(x => x.apiID),
         ...this.ignoreList.map(x => x.apiID)
       ]
@@ -738,11 +740,7 @@ const app = new Vue({
     channelSelector (channel) {
       if (this.channelSelected !== channel) {
         this.channelSelected = channel
-        // setTimeout(() => {
-          const offset = document.getElementById('addDownloadBox').offsetHeight
-          // window.scrollTo({top: offset + 50, behavior:'smooth'})
-          window.scrollTo({top: offset + 50})
-        // }, 0)
+        window.scrollTo({top: 0})
       }
     },
     forceMetaDataUpdate () {
