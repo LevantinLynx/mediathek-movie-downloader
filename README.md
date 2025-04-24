@@ -2,30 +2,61 @@
 
 ## Warum?
 
-Nachdem man in Deutschland sowieso GEZ bezahlt, dachte ich mir, warum nicht auch mal das Angebot nutzen, und eine private Sammlung der verfügbaren Filme in Jellyfin, Plex oder ähnlichem anlegen. Nachdem das ganze manuell doch sehr aufwendig ist, vor allem, wenn mehrere Tonspuren, Untertitel etc. in eine Datei zusammen gefasst und richtig benannt werden sollen.
+Nachdem man in Deutschland sowieso GEZ bezahlt, dachte ich mir, warum nicht auch mal das Angebot nutzen, und eine private Sammlung der verfügbaren Filme in Jellyfin, Plex oder ähnlichem anlegen. Da das ganze manuell doch sehr aufwendig ist, vor allem, wenn mehrere Tonspuren, Untertitel etc. in eine Datei zusammen gefasst und richtig benannt werden sollen, ist automation genau das richtige.
+
+![Mediathek Movie Downloader WebApp](https://i.imgur.com/oxSfpiK.png)
+
+## WebApp
+
+Der Downloader ist ganz normal über den Browser im lokalen Netzwerk erreichbar. Von einer öffentlichen Instanz kann ich nur abraten.
+Es kann auf iOS Geräten über Safari > Teilen > Zum Homebildschirm hinzufügen ein Shortcut erstellt werden. (Android besitze ich nicht, wird dort wohl auch ein solche Funktion geben.)
+
+## Setup
+
+Zwei Ordner anlegen, einen für die Datebank/Cache der andere für die Downloads. Diese werden dann an den Docker Container weitergereicht.
+Für alle Filme wird automatisch ein eigener Ordner mit Namen des Films angelegt. Darin wird dann der Film sowie dessen Untertitel abgelegt.
+
+Beim ersten Start, entweder eine Nacht abwarten oder in den Einstellungen auf "FORCE RELOAD" klicken, um die Metadaten der Sender abzufragen.
 
 ## Docker
+
+### Docker Run
 
 ```bash
 docker run \
   -p 12345:12345 \
   -v /pfad/zum/downloads/ordner:/usr/src/app/downloads \
+  -v /pfad/zum/datenbank/ordner:/usr/src/app/db \
   --restart unless-stopped \
   levantinlynx/mediathek-movie-downloader:latest
 ```
 
-### Docker Compose
+### Docker Compose / Portainer
 
 ```docker
 services:
   mediathek-movie-downloader:
+    container_name: mediathek-movie-downloader
     image: 'levantinlynx/mediathek-movie-downloader:latest'
     restart: unless-stopped
     volumes:
       - '/pfad/zum/downloads/ordner:/usr/src/app/downloads'
+      - '/pfad/zum/datenbank/ordner:/usr/src/app/db'
     ports:
       - '12345:12345'
 ```
+
+---
+
+## Roadmap
+
+- [ ] Nützliche Scripte für ffmpeg (Zusammenfügen von Video Dateien, Umbenennen von Tonspuren …)
+- [ ] Support für ARD Sender-Gruppe
+- [ ] Movie Ratings (imdb, tmdb oder Ähnliches…)
+- [ ] Einstellungen je Download
+  - [ ] Auflösung
+  - [ ] Bandbreite
+  - [ ] Sprachen
 
 ---
 
