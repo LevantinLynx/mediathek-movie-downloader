@@ -288,11 +288,9 @@ async function getParametersForYtdlp (movie, ytDlp) {
   }
 
   // Rate limit for download
-  if (
-    typeof settings.maxDownloadRate === 'number' &&
-    settings.maxDownloadRate > 0
-  ) {
-    downloadOptions.push(`--limit-rate=${settings.maxDownloadRate}${settings.maxDownloadRateUnit || 'M'}`)
+  const maxDownloadRate = parseFloat(settings.maxDownloadRate)
+  if (typeof maxDownloadRate === 'number' & maxDownloadRate > 0) {
+    downloadOptions.push(`--limit-rate=${maxDownloadRate}${settings.maxDownloadRateUnit || 'M'}`)
   }
   // Download all available subtitles
   if (settings?.includeSubtitles) downloadOptions.push('--all-subs')
