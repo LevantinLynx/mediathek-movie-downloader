@@ -305,7 +305,7 @@
         </div>
         <div class="content" v-show="pageSelected === 'settings'">
           <section id="settings">
-            <h1>Settings</h1>
+            <h1>Einstellungen</h1>
             <div class="settings">
               <article>
                 <header>
@@ -314,11 +314,11 @@
                 <div class="box">
                   <label class="top" for="maxDownloads">Max. zeitgleiche Downloads</label>
                   <div class="flexGrp">
-                    <input type="number" id="maxDownloads" v-model="settings.maxDownloads">
+                    <input type="number" min="0" max="99" id="maxDownloads" v-model="settings.maxDownloads">
                   </div>
                   <label class="top" for="maxDownloadRate">Max. download Rate je Download (0 = kein Limit)</label>
                   <div class="flexGrp">
-                    <input type="number" id="maxDownloadRate" v-model="settings.maxDownloadRate"><!--
+                    <input type="number" min="0" id="maxDownloadRate" v-model="settings.maxDownloadRate"><!--
                     --><select name="unit" id="unit" v-model="settings.maxDownloadRateUnit">
                       <option value="K">KB/s</option>
                       <option value="M">MB/s</option>
