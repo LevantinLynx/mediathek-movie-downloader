@@ -1,0 +1,11 @@
+FROM oven/bun:1-alpine AS development
+
+RUN apk add --no-cache tzdata python3 ffmpeg
+
+USER bun
+WORKDIR /usr/src/app
+
+ENV NODE_ENV=development
+
+EXPOSE 12345
+CMD [ "/bin/sh" ]
