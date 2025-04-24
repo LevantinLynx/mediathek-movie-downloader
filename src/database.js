@@ -280,7 +280,23 @@ async function getAllSettings () {
     preferedDownloadLanguage: 'de',
     includeAudioTranscription: true,
     includeClearLanguage: true,
-    includeSubtitles: true
+    includeSubtitles: true,
+
+    channelSelection: [
+      {
+        name: 'ZDF',
+        active: true,
+      }, {
+        name: 'ZDFneo',
+        active: true,
+      }, {
+        name: '3sat',
+        active: true,
+      }, {
+        name: 'Arte',
+        active: true,
+      }
+    ]
   }
 
   return entries?.[0]?.settings

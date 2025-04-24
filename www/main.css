@@ -358,9 +358,10 @@ h1 small {
   font-weight: 600;
 }
 .settings .button {
+  display: block;
   position: relative;
   padding-left: 4.2rem;
-  margin-top: 1em;
+  margin-top: 1.6em;
 }
 .settings .button svg {
   position: absolute;
@@ -374,6 +375,17 @@ h1 small {
 .settings .forceReload {
   background-color: var(--red);
   color: #fff;
+}
+.settings .column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--boxMargin);
+}
+label.top {
+  margin-bottom: 1.4rem;
+}
+label.top:not(:first-child) {
+  margin-top: 2.4rem;
 }
 
 input[type="number"] {

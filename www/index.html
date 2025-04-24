@@ -376,72 +376,102 @@
                   </button>
                 </div>
               </article>
+              <div class="column">
+                <article>
+                  <header>
+                    <h2>Sprachen etc.</h2>
+                  </header>
+                  <div class="box">
+                    <label class="top">Beforzugte Audiosprache</label>
+                    <div class="flexGrp flexSplit">
+                      <input type="radio" name="preferedDownloadLanguage" id="ger" value="de" v-model="settings.preferedDownloadLanguage">
+                      <label for="ger">Deutsch</label>
+                    </div>
+                    <div class="flexGrp flexSplit">
+                      <input type="radio" name="preferedDownloadLanguage" id="eng" value="en" v-model="settings.preferedDownloadLanguage">
+                      <label for="eng">Englisch</label>
+                    </div>
+                    <div class="flexGrp flexSplit">
+                      <input type="radio" name="preferedDownloadLanguage" id="fra" value="fr" v-model="settings.preferedDownloadLanguage">
+                      <label for="fra">Französisch</label>
+                    </div>
+                    <label class="top">Audio</label>
+                    <div class="flexGrp flexSplit">
+                      <input type="checkbox" id="includeAudioTranscription" v-model="settings.includeAudioTranscription">
+                      <label for="includeAudioTranscription">Tonspuren mit Audiotranskription herunterladen</label>
+                    </div>
+                    <div class="flexGrp flexSplit">
+                      <input type="checkbox" id="includeClearLanguage" v-model="settings.includeClearLanguage">
+                      <label for="includeClearLanguage">Tonspuren mit klarer Sprache herunterladen</label>
+                    </div>
+                    <label class="top">Untertitel</label>
+                    <div class="flexGrp flexSplit">
+                      <input type="checkbox" id="includeSubtitles" v-model="settings.includeSubtitles">
+                      <label for="includeSubtitles">Untertitel herunterladen</label>
+                    </div>
+                    <button class="button saveSettings" @click="saveSettings()">
+                      <svg width="2rem" height="2rem" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path id="Combined Shape" fill-rule="evenodd" clip-rule="evenodd" d="M35.2822 4.88487C34.7186 4.31826 33.9535 4 33.1551 4H6.99915C5.34286 4 3.99915 5.34372 3.99915 7V41C3.99915 42.6563 5.34286 44 6.99915 44H40.9991C42.6569 44 43.9991 42.6568 43.9991 41V14.888C43.9991 14.095 43.6861 13.3357 43.1261 12.7728L35.2822 4.88487ZM6.99915 6H12.9999V15.9508C12.9999 17.0831 13.9197 18.0028 15.0519 18.0028H32.9479C34.0802 18.0028 34.9999 17.0831 34.9999 15.9508V11.2048C34.9999 10.6525 34.5522 10.2048 33.9999 10.2048C33.4477 10.2048 32.9999 10.6525 32.9999 11.2048V15.9508C32.9999 15.9785 32.9757 16.0028 32.9479 16.0028H15.0519C15.0242 16.0028 14.9999 15.9785 14.9999 15.9508V6H33.1551C33.4211 6 33.6759 6.10599 33.8642 6.29523L41.7081 14.1831C41.8952 14.3712 41.9991 14.6234 41.9991 14.888V41C41.9991 41.5526 41.552 42 40.9991 42H6.99915C6.44743 42 5.99915 41.5517 5.99915 41V7C5.99915 6.44828 6.44743 6 6.99915 6ZM27.9999 30.0206C27.9999 27.8121 26.2089 26.0206 23.9999 26.0206C23.4477 26.0206 22.9999 25.5729 22.9999 25.0206C22.9999 24.4683 23.4477 24.0206 23.9999 24.0206C27.3136 24.0206 29.9999 26.7077 29.9999 30.0206C29.9999 33.3349 27.3142 36.0206 23.9999 36.0206C20.6857 36.0206 17.9999 33.3349 17.9999 30.0206C17.9999 29.4683 18.4477 29.0206 18.9999 29.0206C19.5522 29.0206 19.9999 29.4683 19.9999 30.0206C19.9999 32.2303 21.7902 34.0206 23.9999 34.0206C26.2097 34.0206 27.9999 32.2303 27.9999 30.0206Z" fill="currentColor"/>
+                      </svg><!--
+                      -->Speichern
+                    </button>
+                  </div>
+                </article>
+                <article>
+                  <header>
+                    <h2>Meta Daten Downloader</h2>
+                  </header>
+                  <div class="box">
+                    <p>
+                      Die Automatik läd zufällig zwischen 23 und 6 Uhr einmal Täglich die Daten.
+                    </p>
+                    <p v-if="nextMetaDataUpdateDate">
+                      Nächster geplanter Abruf: <b>{{ new Date(nextMetaDataUpdateDate).toLocaleString('de-DE') }}</b>
+                    </p>
+                    <p>
+                      Um die APIs nicht zu überladen, wird täglich um 6:01 Uhr eine zufällige neue Zeit für den Abruf generiert.
+                    </p>
+                    <p>
+                      Achtung: Einige APIs geben unvollständige Daten zurück,
+                      wenn innerhalb der Jugendschutz Zeiten abgerufen wird! (6-23 Uhr)
+                    </p>
+                    <p>
+                      Diese Aktion löscht alle gecachten Meta und EPG Daten und fragt alle informationen erneut an.
+                    </p>
+                    <button class="button forceReload" @click="forceMetaDataUpdate()">
+                      <svg width="2rem" height="2rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M18.364 3.05762C18.7782 3.05762 19.114 3.3934 19.114 3.80762V8.05026C19.114 8.46447 18.7782 8.80026 18.364 8.80026H14.1213C13.7071 8.80026 13.3713 8.46447 13.3713 8.05026C13.3713 7.63604 13.7071 7.30026 14.1213 7.30026H16.4817C13.6363 5.05718 9.4987 5.24825 6.87348 7.87348C4.04217 10.7048 4.04217 15.2952 6.87348 18.1265C9.70478 20.9578 14.2952 20.9578 17.1265 18.1265C19.0234 16.2297 19.6504 13.5428 19.0039 11.1219C18.897 10.7217 19.1348 10.3106 19.535 10.2038C19.9352 10.0969 20.3462 10.3347 20.4531 10.7349C21.2321 13.6518 20.478 16.8964 18.1872 19.1872C14.7701 22.6043 9.2299 22.6043 5.81282 19.1872C2.39573 15.7701 2.39573 10.2299 5.81282 6.81282C9.04483 3.5808 14.1762 3.40576 17.614 6.28768V3.80762C17.614 3.3934 17.9497 3.05762 18.364 3.05762Z" fill="currentColor"/>
+                      </svg><!--
+                      -->FORCE RELOAD
+                    </button>
+                  </div>
+                </article>
+              </div>
               <article>
                 <header>
-                  <h2>Sprachen etc.</h2>
+                  <h2>Sender Auswahl</h2>
                 </header>
                 <div class="box">
-                  <label class="top">Beforzugte Audiosprache</label>
-                  <div class="flexGrp flexSplit">
-                    <input type="radio" name="preferedDownloadLanguage" id="ger" value="de" v-model="settings.preferedDownloadLanguage">
-                    <label for="ger">Deutsch</label>
+                  <p>
+                    Filtert die angezeigten Daten. Werden alle Sender aktiviert, wird es auf mobilen Endgeräten unübersichtlich.
+                  </p>
+                  <p v-if="nextMetaDataUpdateDate">
+                    Nächster geplanter Abruf: <b>{{ new Date(nextMetaDataUpdateDate).toLocaleString('de-DE') }}</b>
+                  </p>
+                  <label class="top">Sender</label>
+                  <div class="flexGrp flexSplit" v-for="channel in settings.channelSelection">
+                    <input type="checkbox" :name="channel.name.toLowerCase()" :id="'channel_selection_' + channel.name.toLowerCase()" v-model="channel.active">
+                    <label :for="'channel_selection_' + channel.name.toLowerCase()">{{ channel.name }}</label>
                   </div>
-                  <div class="flexGrp flexSplit">
-                    <input type="radio" name="preferedDownloadLanguage" id="eng" value="en" v-model="settings.preferedDownloadLanguage">
-                    <label for="eng">Englisch</label>
-                  </div>
-                  <div class="flexGrp flexSplit">
-                    <input type="radio" name="preferedDownloadLanguage" id="fra" value="fr" v-model="settings.preferedDownloadLanguage">
-                    <label for="fra">Französisch</label>
-                  </div>
-                  <label class="top">Audio</label>
-                  <div class="flexGrp flexSplit">
-                    <input type="checkbox" id="includeAudioTranscription" v-model="settings.includeAudioTranscription">
-                    <label for="includeAudioTranscription">Tonspuren mit Audiotranskription herunterladen</label>
-                  </div>
-                  <div class="flexGrp flexSplit">
-                    <input type="checkbox" id="includeClearLanguage" v-model="settings.includeClearLanguage">
-                    <label for="includeClearLanguage">Tonspuren mit klarer Sprache herunterladen</label>
-                  </div>
-                  <label class="top">Untertitel</label>
-                  <div class="flexGrp flexSplit">
-                    <input type="checkbox" id="includeSubtitles" v-model="settings.includeSubtitles">
-                    <label for="includeSubtitles">Untertitel herunterladen</label>
-                  </div>
+                  <small>
+                    Wird ein Channel deaktiviert, bei dem Downloads geplant sind, werden diese Filme trotzdem heruntergeladen.
+                    Die Meta Daten werden jedoch weder geladen, noch können diese weiter angezeigt werden.
+                  </small>
                   <button class="button saveSettings" @click="saveSettings()">
                     <svg width="2rem" height="2rem" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path id="Combined Shape" fill-rule="evenodd" clip-rule="evenodd" d="M35.2822 4.88487C34.7186 4.31826 33.9535 4 33.1551 4H6.99915C5.34286 4 3.99915 5.34372 3.99915 7V41C3.99915 42.6563 5.34286 44 6.99915 44H40.9991C42.6569 44 43.9991 42.6568 43.9991 41V14.888C43.9991 14.095 43.6861 13.3357 43.1261 12.7728L35.2822 4.88487ZM6.99915 6H12.9999V15.9508C12.9999 17.0831 13.9197 18.0028 15.0519 18.0028H32.9479C34.0802 18.0028 34.9999 17.0831 34.9999 15.9508V11.2048C34.9999 10.6525 34.5522 10.2048 33.9999 10.2048C33.4477 10.2048 32.9999 10.6525 32.9999 11.2048V15.9508C32.9999 15.9785 32.9757 16.0028 32.9479 16.0028H15.0519C15.0242 16.0028 14.9999 15.9785 14.9999 15.9508V6H33.1551C33.4211 6 33.6759 6.10599 33.8642 6.29523L41.7081 14.1831C41.8952 14.3712 41.9991 14.6234 41.9991 14.888V41C41.9991 41.5526 41.552 42 40.9991 42H6.99915C6.44743 42 5.99915 41.5517 5.99915 41V7C5.99915 6.44828 6.44743 6 6.99915 6ZM27.9999 30.0206C27.9999 27.8121 26.2089 26.0206 23.9999 26.0206C23.4477 26.0206 22.9999 25.5729 22.9999 25.0206C22.9999 24.4683 23.4477 24.0206 23.9999 24.0206C27.3136 24.0206 29.9999 26.7077 29.9999 30.0206C29.9999 33.3349 27.3142 36.0206 23.9999 36.0206C20.6857 36.0206 17.9999 33.3349 17.9999 30.0206C17.9999 29.4683 18.4477 29.0206 18.9999 29.0206C19.5522 29.0206 19.9999 29.4683 19.9999 30.0206C19.9999 32.2303 21.7902 34.0206 23.9999 34.0206C26.2097 34.0206 27.9999 32.2303 27.9999 30.0206Z" fill="currentColor"/>
                     </svg><!--
                     -->Speichern
-                  </button>
-                </div>
-              </article>
-              <article>
-                <header>
-                  <h2>Meta Daten Downloader</h2>
-                </header>
-                <div class="box">
-                  <p>
-                    Die Automatik läd zufällig zwischen 23 und 6 Uhr einmal Täglich die Daten.
-                  </p>
-                  <p v-if="nextMetaDataUpdateDate">
-                    Nächster geplanter Abruf: <b>{{ new Date(nextMetaDataUpdateDate).toLocaleString('de-DE') }}</b>
-                  </p>
-                  <p>
-                    Um die APIs nicht zu überladen, wird täglich um 6:01 Uhr eine zufällige neue Zeit für den Abruf generiert.
-                  </p>
-                  <p>
-                    Achtung: Einige APIs geben unvollständige Daten zurück,
-                    wenn innerhalb der Jugendschutz Zeiten abgerufen wird! (6-23 Uhr)
-                  </p>
-                  <p>
-                    Diese Aktion löscht alle gecachten Meta und EPG Daten und fragt alle informationen erneut an.
-                  </p>
-                  <button class="button forceReload" @click="forceMetaDataUpdate()">
-                    <svg width="2rem" height="2rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fill-rule="evenodd" clip-rule="evenodd" d="M18.364 3.05762C18.7782 3.05762 19.114 3.3934 19.114 3.80762V8.05026C19.114 8.46447 18.7782 8.80026 18.364 8.80026H14.1213C13.7071 8.80026 13.3713 8.46447 13.3713 8.05026C13.3713 7.63604 13.7071 7.30026 14.1213 7.30026H16.4817C13.6363 5.05718 9.4987 5.24825 6.87348 7.87348C4.04217 10.7048 4.04217 15.2952 6.87348 18.1265C9.70478 20.9578 14.2952 20.9578 17.1265 18.1265C19.0234 16.2297 19.6504 13.5428 19.0039 11.1219C18.897 10.7217 19.1348 10.3106 19.535 10.2038C19.9352 10.0969 20.3462 10.3347 20.4531 10.7349C21.2321 13.6518 20.478 16.8964 18.1872 19.1872C14.7701 22.6043 9.2299 22.6043 5.81282 19.1872C2.39573 15.7701 2.39573 10.2299 5.81282 6.81282C9.04483 3.5808 14.1762 3.40576 17.614 6.28768V3.80762C17.614 3.3934 17.9497 3.05762 18.364 3.05762Z" fill="currentColor"/>
-                    </svg><!--
-                    -->FORCE RELOAD
                   </button>
                 </div>
               </article>
@@ -565,6 +595,7 @@ const app = new Vue({
   data: {
     socket: null,
     version: '0.0.0',
+    isInitialized: false,
 
     msgTimeoutFunction: null,
     msgType: '',
@@ -598,6 +629,17 @@ const app = new Vue({
     })
     this.socket.on('settingsUpdate', settings => {
       this.settings = settings
+
+      if (!this.isInitialized) {
+        // Only set this on first load
+        const activeChannels = settings.channelSelection
+          .filter(channel => channel.active)
+          .map(channel => channel.name.toLowerCase())
+        if (activeChannels.length > 0) {
+          this.channelSelected = activeChannels[0]
+        }
+        this.isInitialized = true
+      }
     })
 
     this.socket.on('bannerNotification', message => {
