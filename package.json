@@ -11,16 +11,16 @@
   },
   "devDependencies": {
     "snazzy": "^9.0.0",
-    "standard": "17.0.0"
+    "standard": "^17.1.2"
   },
   "dependencies": {
     "@seald-io/nedb": "^4.1.1",
-    "axios": "^1.8.4",
-    "cron": "^3.5.0",
+    "axios": "^1.9.0",
+    "cron": "^4.3.0",
     "date-fns": "^4.1.0",
-    "express": "^4.21.2",
+    "express": "^5.1.0",
     "fs-extra": "^11.3.0",
-    "jsdom": "^25.0.1",
+    "jsdom": "^26.1.0",
     "lodash": "^4.17.21",
     "socket.io": "^4.8.1",
     "truncate-utf8-bytes": "^1.0.2",
