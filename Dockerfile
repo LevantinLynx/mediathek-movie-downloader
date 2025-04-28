@@ -23,7 +23,7 @@ RUN bun build ./index.js --compile --outfile download_server
 
 FROM alpine:latest AS final
 
-RUN apk add --no-cache tzdata python3 ffmpeg
+RUN apk add --no-cache tzdata python3 py3-pycryptodomex ffmpeg
 
 ENV USER_ID=1000
 ENV GROUP_ID=1000

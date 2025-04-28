@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/main.css">
   <link rel="icon" href="/imgs/icon.png">
-  <title>Movie Downloader</title>
+  <title>Mediathek Downloader</title>
   <!--for Apple devices-->
   <meta name="apple-mobile-web-app-title" content="Movie Downloader" />
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -42,23 +42,22 @@
                   <main class="movieProgress">
                     <p>{{ movie.info.description}}</p>
                     <div v-if="progress[movie.apiID]">
-                      <div class="progressBar" :class="{ stats: showDownloadStats }">
-                        <div class="bar" :style="'width: ' + progress[movie.apiID].percent + '%;'"></div>
+                      <div class="progressBar stats">
+                        <div class="bar" :style="'width: ' + (progress[movie.apiID].percent || 100) + '%;'"></div>
                         <div class="stats">
-                          <span v-if="showDownloadStats">{{ progress[movie.apiID].percent }} %</span>
+                          <span v-if="progress[movie.apiID].percent">{{ progress[movie.apiID].percent }} %</span>
                           <span v-else>{{ progress[movie.apiID].size }}</span>
                         </div>
                       </div>
                       <div class="progressInfo">
-                        <span v-if="showDownloadStats">
+                        <span v-if="progress[movie.apiID].size && progress[movie.apiID].speed">
                           {{ progress[movie.apiID].size }} @ {{ progress[movie.apiID].speed }}
                         </span>
                         <span v-else>Loading &hellip;</span>
                         <span class="spacer"></span>
-                        <span v-if="showDownloadStats">
+                        <span v-if="progress[movie.apiID].eta">
                           {{ progress[movie.apiID].eta }} ETA
                         </span>
-                        <span v-else>{{ progress[movie.apiID].percent }} %</span>
                       </div>
                     </div>
                     <div v-else>
@@ -607,7 +606,6 @@ const app = new Vue({
 
     pageSelected: 'default',
     lastPageSelected: 'default',
-    showDownloadStats: true,
 
     downloadUrl: '',
 
