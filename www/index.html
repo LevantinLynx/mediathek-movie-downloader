@@ -457,15 +457,24 @@
                   <p v-if="nextMetaDataUpdateDate">
                     Nächster geplanter Abruf: <b>{{ new Date(nextMetaDataUpdateDate).toLocaleString('de-DE') }}</b>
                   </p>
-                  <label class="top">Sender</label>
-                  <div class="flexGrp flexSplit" v-for="channel in settings.channelSelection">
-                    <input type="checkbox" :name="channel.name.toLowerCase()" :id="'channel_selection_' + channel.name.toLowerCase()" v-model="channel.active">
-                    <label :for="'channel_selection_' + channel.name.toLowerCase()">{{ channel.name }}</label>
+                  <label class="top">Sender <small>{{ settings.channelSelection?.filter(x => x.active)?.length }}</small></label>
+                  <div class="channelSelect">
+                    <div class="flexGrp flexSplit" v-for="channel in settings.channelSelection">
+                      <input type="checkbox" :name="channel.name.toLowerCase()" :id="'channel_selection_' + channel.name.toLowerCase()" v-model="channel.active">
+                      <label :for="'channel_selection_' + channel.name.toLowerCase()">{{ channel.name }}</label>
+                    </div>
                   </div>
-                  <small>
-                    Wird ein Channel deaktiviert, bei dem Downloads geplant sind, werden diese Filme trotzdem heruntergeladen.
-                    Die Meta Daten werden jedoch weder geladen, noch können diese weiter angezeigt werden.
-                  </small>
+                  <p>
+                    <small>
+                      * Wird ein Channel deaktiviert, bei dem Downloads geplant sind, werden diese Filme trotzdem heruntergeladen.
+                      Die Meta Daten werden jedoch weder geladen, noch können diese weiter angezeigt werden.
+                    </small>
+                  </p>
+                  <p>
+                    <small>
+                      ** Es wird nicht empfohlen mehr als 10 Channel aktiviert zu haben. Das Menü wird unübersichtlich.
+                    </small>
+                  </p>
                   <button class="button saveSettings" @click="saveSettings()">
                     <svg width="2rem" height="2rem" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path id="Combined Shape" fill-rule="evenodd" clip-rule="evenodd" d="M35.2822 4.88487C34.7186 4.31826 33.9535 4 33.1551 4H6.99915C5.34286 4 3.99915 5.34372 3.99915 7V41C3.99915 42.6563 5.34286 44 6.99915 44H40.9991C42.6569 44 43.9991 42.6568 43.9991 41V14.888C43.9991 14.095 43.6861 13.3357 43.1261 12.7728L35.2822 4.88487ZM6.99915 6H12.9999V15.9508C12.9999 17.0831 13.9197 18.0028 15.0519 18.0028H32.9479C34.0802 18.0028 34.9999 17.0831 34.9999 15.9508V11.2048C34.9999 10.6525 34.5522 10.2048 33.9999 10.2048C33.4477 10.2048 32.9999 10.6525 32.9999 11.2048V15.9508C32.9999 15.9785 32.9757 16.0028 32.9479 16.0028H15.0519C15.0242 16.0028 14.9999 15.9785 14.9999 15.9508V6H33.1551C33.4211 6 33.6759 6.10599 33.8642 6.29523L41.7081 14.1831C41.8952 14.3712 41.9991 14.6234 41.9991 14.888V41C41.9991 41.5526 41.552 42 40.9991 42H6.99915C6.44743 42 5.99915 41.5517 5.99915 41V7C5.99915 6.44828 6.44743 6 6.99915 6ZM27.9999 30.0206C27.9999 27.8121 26.2089 26.0206 23.9999 26.0206C23.4477 26.0206 22.9999 25.5729 22.9999 25.0206C22.9999 24.4683 23.4477 24.0206 23.9999 24.0206C27.3136 24.0206 29.9999 26.7077 29.9999 30.0206C29.9999 33.3349 27.3142 36.0206 23.9999 36.0206C20.6857 36.0206 17.9999 33.3349 17.9999 30.0206C17.9999 29.4683 18.4477 29.0206 18.9999 29.0206C19.5522 29.0206 19.9999 29.4683 19.9999 30.0206C19.9999 32.2303 21.7902 34.0206 23.9999 34.0206C26.2097 34.0206 27.9999 32.2303 27.9999 30.0206Z" fill="currentColor"/>

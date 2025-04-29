@@ -200,7 +200,7 @@ b {
   width: 90%;
   max-width: 1280px;
   min-height: max-content;
-  margin: 3rem auto 18rem;
+  margin: 3rem auto 20rem;
 }
 .menu {
   position: fixed;
@@ -219,7 +219,7 @@ b {
 
   display: flex;
   justify-content: center;
-  padding: 1.6rem 3rem 3.6rem;
+  padding: 1.6rem 2rem 3.6rem;
 }
 #menu .active {
   color: rgba(255,255,255, .85);
@@ -249,16 +249,30 @@ b {
   cursor: pointer;
   filter: grayscale(1);
   transition: filter 250ms ease-in-out;
+  padding: .4rem .5rem;
+  border: .1rem solid transparent;
+  box-sizing: content-box;
+  border-radius: .4rem;
+  transition: background 250ms ease-in-out,
+              border-color 250ms ease-in-out,
+              filter 300ms ease-in-out;
 }
 #subMenu nav {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 2rem;
+  gap: .6rem;
+}
+#subMenu nav img:focus,
+#subMenu nav img:hover {
+  filter: grayscale(0);
+  border-color: var(--dark4);
 }
 #subMenu nav img.active {
   filter: grayscale(0);
+  border-color: var(--dark4);
+  background-color: rgba(255,255,255,.1);
 }
 .movieCount {
   padding: var(--boxMargin);
@@ -407,6 +421,15 @@ input[type="number"] {
 .flexGrp input {
   flex-grow: 1;
   max-width: 100%;
+}
+.channelSelect {
+  display: grid;
+  gap: 1.4rem 2rem;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 2rem;
+}
+.channelSelect .flexGrp {
+  margin: 0;
 }
 
 .grp input,
