@@ -84,7 +84,7 @@ async function ytDlpDownloader (movie) {
     const { multiVideoOptions, files } = downloadOptions
     logger.info(`[YT-DLP] Starting multi video download of ${multiVideoOptions.length} files for "${movie.title}" …`)
     for (let i = 0; i < multiVideoOptions.length; i++) {
-      await ytDlpDownloadProcess(movie, multiVideoOptions[i], files[i].file, `${i+1}/${multiVideoOptions.length}`)
+      await ytDlpDownloadProcess(movie, multiVideoOptions[i], `${i + 1}/${multiVideoOptions.length}`)
     }
   } else {
     await ytDlpDownloadProcess(movie, downloadOptions)
