@@ -45,7 +45,10 @@
                       <div class="progressBar stats">
                         <div class="bar" :style="'width: ' + (progress[movie.apiID].percent || 100) + '%;'"></div>
                         <div class="stats">
-                          <span v-if="progress[movie.apiID].percent">{{ progress[movie.apiID].percent }} %</span>
+                          <span v-if="progress[movie.apiID].percent">
+                            <span class="countInfo" v-if="progress[movie.apiID].countInfo !== '1/1'">{{ progress[movie.apiID].countInfo }}</span>
+                            {{ progress[movie.apiID].percent }} %
+                          </span>
                           <span v-else>{{ progress[movie.apiID].size }}</span>
                         </div>
                       </div>

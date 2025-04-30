@@ -650,6 +650,10 @@ article p:not(:last-child) {
   flex-direction: column;
   justify-content: space-between;
 }
+.movieProgress .countInfo {
+  display: inline-block;
+  margin-right: .8rem;
+}
 
 .channelLinks {
   padding-top: 0;
