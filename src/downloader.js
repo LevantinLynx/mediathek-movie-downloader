@@ -91,7 +91,7 @@ async function ytDlpDownloader (movie) {
   }
 }
 
-function ytDlpDownloadProcess (movie, downloadOptions, fileName, countInfo) {
+function ytDlpDownloadProcess (movie, downloadOptions, countInfo) {
   // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
     // Initialize yt-dlp instance
@@ -110,7 +110,6 @@ function ytDlpDownloadProcess (movie, downloadOptions, fileName, countInfo) {
             size: data[1],
             speed: data[2],
             eta: data[3],
-            fileName,
             countInfo
           })
         }
