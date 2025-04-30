@@ -11,6 +11,7 @@ const jsonFile = new Glob('*.json')
 const movieMkvFile = new Glob('*.mkv')
 const movieMp4File = new Glob('*.mp4')
 const movieWebmFile = new Glob('*.webm')
+const subtitleFile = new Glob('*.vtt')
 
 /**
  * Clean up file names and remove partial download files
@@ -56,6 +57,18 @@ async function downloadPostProcessing (movie) {
         logger.debug('[POSTPROCESSING] Json file detected!')
       } else if (movieMkvFile.match(file) || movieMp4File.match(file) || movieWebmFile.match(file)) {
         logger.debug('[POSTPROCESSING] Movie file detected')
+      } else if (subtitleFile.match(file)) {
+        logger.debug('[POSTPROCESSING] Subtitle file detected')
+
+        const parts = file.replace('.vtt', '').split('.')
+        const lang = parts.pop()
+        const cleanFileName = `${movie.title}${lang.length === 3 ? `.${lang}` : ''}.vtt`
+
+        logger.debug(`[POSTPROCESSING] Renaming subtitle "${file}" to "${cleanFileName}"…`)
+        await fs.move(
+          path.join(movie.baseDownloadPath, file),
+          path.join(movie.baseDownloadPath, cleanFileName)
+        )
       }
     }
   }
