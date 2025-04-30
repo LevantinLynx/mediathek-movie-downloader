@@ -1,5 +1,12 @@
 [
   {
+    "iso_639_2": "und",
+    "iso_639_1": "und",
+    "english": "Undefined",
+    "french": "Undefined",
+    "german": "Unbekannt"
+  },
+  {
     "iso_639_2": "aar",
     "iso_639_1": "aa",
     "english": "Afar",

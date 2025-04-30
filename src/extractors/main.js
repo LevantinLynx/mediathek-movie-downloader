@@ -1,5 +1,6 @@
 const logger = require('../logger.js')
 const zdfExtractor = require('./zdf.js')
+const ardExtractor = require('./ard.js')
 const dreisatExtractor = require('./dreisat.js')
 const arteExtractor = require('./arte.js')
 const { getAllSettings } = require('../database.js')
@@ -9,7 +10,8 @@ async function getAvailableMovieMetaDataFromApis () {
     const settings = await getAllSettings()
     const activeChannels = settings.channelSelection
       .filter(channel => channel.active)
-      .map(channel => channel.name.toLowerCase())
+      .map(channel => channel.name.toLowerCase().replace(' ', '_'))
+    logger.debug('activeChannels', activeChannels)
     const cache = {}
 
     if (
@@ -50,6 +52,21 @@ async function getAvailableMovieMetaDataFromApis () {
           channel: 'arte',
           updated: new Date(),
           movies: arteData
+        }
+      }
+    }
+
+    const ardApiData = await ardExtractor.scrapeMovieData()
+    const ardApiDataChannels = Object.keys(ardApiData)
+    for (let i = 0; i < ardApiDataChannels.length; i++) {
+      if (
+        activeChannels.indexOf(ardApiDataChannels[i]) > -1 &&
+        ardApiData[ardApiDataChannels[i]]
+      ) {
+        cache[ardApiDataChannels[i]] = {
+          channel: ardApiDataChannels[i],
+          updated: new Date(),
+          movies: ardApiData[ardApiDataChannels[i]]
         }
       }
     }

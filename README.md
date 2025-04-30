@@ -50,13 +50,17 @@ services:
 
 ## Roadmap
 
+- [ ] Downloads manuell per Link hinzufügen, Serien, Doku etc.
 - [ ] Nützliche Scripte für ffmpeg (Zusammenfügen von Video Dateien, Umbenennen von Tonspuren …)
-- [ ] Support für ARD Sender-Gruppe
 - [ ] Movie Ratings (imdb, tmdb oder Ähnliches…)
 - [ ] Einstellungen je Download
   - [ ] Auflösung
   - [ ] Bandbreite
   - [ ] Sprachen
+
+## Erledigt
+
+- [x] Support für ARD Sender-Gruppe
 
 ---
 

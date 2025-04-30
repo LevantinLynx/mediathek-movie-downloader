@@ -69,22 +69,33 @@ async function downloadMovie (movie) {
   }
 }
 
-function ytDlpDownloader (movie) {
+async function ytDlpDownloader (movie) {
+  let downloadOptions = []
+  let multiVideoDownload = false
+
+  downloadOptions = await getParametersForYtdlp(movie)
+  // Detect if return contains multi video download instructions (Object return)
+  if (!Array.isArray(downloadOptions)) multiVideoDownload = true
+
+  // Start cron job for progress updates if it's not running
+  serverEvents.emit('startDownloadProgressJob')
+
+  if (multiVideoDownload) {
+    const { multiVideoOptions, files } = downloadOptions
+    logger.info(`[YT-DLP] Starting multi video download of ${multiVideoOptions.length} files for "${movie.title}" …`)
+    for (let i = 0; i < multiVideoOptions.length; i++) {
+      await ytDlpDownloadProcess(movie, multiVideoOptions[i], files[i].file, `${i+1}/${multiVideoOptions.length}`)
+    }
+  } else {
+    await ytDlpDownloadProcess(movie, downloadOptions)
+  }
+}
+
+function ytDlpDownloadProcess (movie, downloadOptions, countInfo) {
   // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
     // Initialize yt-dlp instance
     const ytDlp = new YTDlpWrap(path.join(__dirname, 'bin', 'yt-dlp'))
-
-    let downloadOptions = []
-    try {
-      downloadOptions = await getParametersForYtdlp(movie, ytDlp)
-    } catch (err) {
-      logger.error(err)
-      reject(err)
-    }
-
-    // Start cron job for progress updates if it's not running
-    serverEvents.emit('startDownloadProgressJob')
 
     // Try downloading movie
     ytDlp
@@ -98,7 +109,8 @@ function ytDlpDownloader (movie) {
             percent: `${parseFloat(data[0])}`.split('.')[0],
             size: data[1],
             speed: data[2],
-            eta: data[3]
+            eta: data[3],
+            countInfo
           })
         }
       })
@@ -107,7 +119,14 @@ function ytDlpDownloader (movie) {
   })
 }
 
-async function getParametersForYtdlp (movie, ytDlp) {
+async function getParametersForYtdlp (movie) {
+  if ([
+    'ard', 'das_erste', 'ard_alpha', 'br', 'hr', 'sr',
+    'mdr', 'wdr', 'ndr', 'swr', 'rbb', 'one', 'funk', 'kika'
+  ].indexOf(movie.channel) > -1) {
+    return await getArdGroupParametersForYtdlp(movie)
+  }
+
   const settings = await db.getAllSettings()
   // Create download parameters
   const downloadOptions = [
@@ -115,7 +134,8 @@ async function getParametersForYtdlp (movie, ytDlp) {
     '-P', movie.baseDownloadPath // Directory to download to
   ]
 
-  if (!ytDlp) ytDlp = new YTDlpWrap(path.join(__dirname, 'bin', 'yt-dlp'))
+  // Initialize yt-dlp instance
+  const ytDlp = new YTDlpWrap(path.join(__dirname, 'bin', 'yt-dlp'))
   const audioList = []
 
   if (['arte'].indexOf(movie.channel) > -1) {
@@ -265,7 +285,7 @@ async function getParametersForYtdlp (movie, ytDlp) {
       }
     } else {
       const formats = [...info.formats].reverse()
-      const resolutionLimit = parseInt(settings.downloadResolutionLimit) || 9999
+      const resolutionLimit = await getResolutionLimitAsInt()
       for (let i = 0; i < formats.length; i++) {
         const format = formats[i]
         if (format.height <= resolutionLimit) {
@@ -300,6 +320,11 @@ async function getParametersForYtdlp (movie, ytDlp) {
   return downloadOptions
 }
 
+async function getResolutionLimitAsInt () {
+  const settings = await db.getAllSettings()
+  return parseInt(settings.downloadResolutionLimit) || 9999
+}
+
 async function getFfmpegVideoResolutionOption () {
   const settings = await db.getAllSettings()
   logger.debug('getFfmpegVideoResolutionOption', settings)
@@ -315,6 +340,136 @@ async function getFfmpegVideoResolutionOption () {
     default:
       return 'best*[height<=9999]'
   }
+}
+
+async function getArdGroupParametersForYtdlp (movie) {
+  // Initialize yt-dlp instance
+  const ytDlp = new YTDlpWrap(path.join(__dirname, 'bin', 'yt-dlp'))
+
+  const settings = await db.getAllSettings()
+  const resolutionLimit = await getResolutionLimitAsInt()
+  // Rate limit for download
+  const maxDownloadRate = parseFloat(settings.maxDownloadRate)
+
+  const multiOptions = {
+    files: [],
+    multiVideoOptions: []
+  }
+
+  // Create download parameters
+  const downloadOptions = [
+    movie.downloadUrl, // Add url to the movie
+    '-P', movie.baseDownloadPath // Directory to download to
+  ]
+
+  if (typeof maxDownloadRate === 'number' & maxDownloadRate > 0) {
+    downloadOptions.push(`--limit-rate=${maxDownloadRate}${settings.maxDownloadRateUnit || 'M'}`)
+  }
+
+  // Get video info
+  const info = await ytDlp.getVideoInfo(downloadOptions)
+  if (process.env.NODE_ENV === 'development') {
+    await Bun.write(
+      path.join(movie.baseDownloadPath, `ytdlp_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
+      JSON.stringify(info)
+    )
+  }
+
+  // Add download parameters
+  // Get all available audio language codes
+  const audioLanguages = _.uniqBy(
+    [...(info?.formats || [])]
+      .reverse()
+      .map(format => {
+        return {
+          id: format.format_id,
+          lang: format.language
+        }
+      }),
+    'lang'
+  )
+  logger.debug('[YT-DLP] Available audio languages:', audioLanguages)
+
+  const rawVideoFormats = [...info.formats].reverse()
+  const rawAudioFormats = [...info.formats]
+  function getVideoForAudioIdentifier (lang, isForAudioExtractionOnly) {
+    if (isForAudioExtractionOnly) {
+      for (let i = 0; i < rawAudioFormats.length; i++) {
+        if (
+          rawAudioFormats[i].language === lang &&
+          rawAudioFormats[i].height >= 360
+        ) return rawAudioFormats[i]
+      }
+    }
+
+    for (let i = 0; i < rawVideoFormats.length; i++) {
+      if (
+        rawVideoFormats[i].language === lang &&
+        rawVideoFormats[i].height <= resolutionLimit
+      ) return rawVideoFormats[i]
+    }
+
+    logger.debug('No format matching was found!', [...info.formats])
+    return null
+  }
+
+  let defaultAudioVideo = audioLanguages.filter(entry => entry.lang.indexOf('audio-description') === -1)
+  if (defaultAudioVideo.length === 0) defaultAudioVideo = audioLanguages
+  // Use first language entry thats not a special version as default audio & video
+  const videoFile = getVideoForAudioIdentifier(defaultAudioVideo[0].lang, false)
+
+  // Add video file to options and info
+  multiOptions.files.push({
+    file: `${videoFile.format_id}.${videoFile.language}.mp4`.replace(' ', '_'),
+    language: `${videoFile.language.split('-')[0]}`,
+    rawLanguage: `${videoFile.language}`,
+    video: true
+  })
+  const videoFileOptions = [
+    ...downloadOptions,
+    '-f', `${videoFile.format_id}`,
+    '-o', `${videoFile.format_id}.${videoFile.language}.mp4`.replace(' ', '_')
+  ]
+  if (settings.includeSubtitles) videoFileOptions.push('--all-subs')
+  multiOptions.multiVideoOptions.push(videoFileOptions)
+
+  // Audio files
+  for (let i = 1; i < defaultAudioVideo.length; i++) {
+    const formatObject = getVideoForAudioIdentifier(defaultAudioVideo[i].lang, true)
+    multiOptions.files.push({
+      file: `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_'),
+      language: `${formatObject.language.split('-')[0]}`,
+      rawLanguage: `${formatObject.language}`
+    })
+    multiOptions.multiVideoOptions.push([
+      ...downloadOptions,
+      '-f', `${formatObject.format_id}`,
+      '-o', `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_')
+    ])
+  }
+
+  // Audio description files
+  if (settings.includeAudioTranscription) {
+    const audioTranscriptions = audioLanguages.filter(entry => entry.lang.indexOf('audio-description') > -1)
+    for (let i = 0; i < audioTranscriptions.length; i++) {
+      const formatObject = getVideoForAudioIdentifier(audioTranscriptions[i].lang, true)
+      multiOptions.files.push({
+        file: `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_'),
+        language: `${formatObject.language.split('-')[0]}`,
+        rawLanguage: `${formatObject.language}`
+      })
+      multiOptions.multiVideoOptions.push([
+        ...downloadOptions,
+        '-f', `${formatObject.format_id}`,
+        '-o', `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_')
+      ])
+    }
+  }
+  logger.debug('multiOptions', multiOptions)
+
+  await createMultiFilePostProcessingFiles(movie, multiOptions)
+
+  return multiOptions
 }
 
 async function createAudioAndPostProcessingFiles (movie, audioList) {
@@ -383,6 +538,74 @@ for filename in *.vtt; do
   fname="\${filename%.*}"
   ffmpeg -i "$filename" "$fname.srt"
 done
+
+find . -size 0 -delete`
+
+  await Bun.write(
+    path.join(movie.baseDownloadPath, `audio_rename_script_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.sh`),
+    ffmpegAudioTitleString
+  )
+}
+
+async function createMultiFilePostProcessingFiles (movie, multiOptions) {
+  const { files } = multiOptions
+
+  const audioJson = []
+
+  for (let i = 0; i < files.length; i++) {
+    const { file, language: isoLangCode, rawLanguage: audioID } = files[i]
+    logger.debug(file, isoLangCode)
+    const isoCodeInfo = getIso639Info(`${isoLangCode}`.length === 3 ? isoLangCode : 'und')
+    logger.debug(isoCodeInfo, typeof isoLangCode, isoLangCode)
+
+    const audioEntry = {
+      iso_639_1: isoLangCode,
+      audioID
+    }
+
+    if (isoCodeInfo) {
+      audioEntry.iso_639_1 = isoCodeInfo.iso_639_1
+      audioEntry.iso_639_2 = isoCodeInfo.iso_639_2
+      audioEntry.title = `${isoCodeInfo.german}`
+
+      if (audioID.indexOf('audio-description') > -1) audioEntry.title += ' (Audiodeskription)'
+      // @TODO: find out if there is a clear language option in ard videos
+      // else if (rawLang.indexOf('') > -1) audioEntry.title += ' (klare Sprache)'
+      else if (audioID === 'ov' || audioID === 'OV') audioEntry.title += ' (Originalton)'
+    }
+    audioJson.push(audioEntry)
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    await Bun.write(
+      path.join(movie.baseDownloadPath, `audio_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
+      JSON.stringify(audioJson)
+    )
+  }
+
+  let ffmpegCommandString = 'ffmpeg'
+  let mapString = ' -c:a copy -c:v copy'
+  for (let i = 0; i < files.length; i++) {
+    ffmpegCommandString += ` -i ${files[i].file}`
+    if (files[i].video) mapString += ` -map ${i}:v:0`
+    mapString += ` -map ${i}:a:0 -metadata:s:a:${i} language=${audioJson[i].iso_639_2} -metadata:s:a:${i} title="${audioJson[i].title}"`
+  }
+  ffmpegCommandString += `${mapString} "${movie.title}.mkv"`
+
+  logger.debug('ffmpegCommandString', ffmpegCommandString)
+
+  const ffmpegAudioTitleString = `#!/bin/sh
+cd "${movie.baseDownloadPath}"
+
+# Combine video and all audio tracks from the ${audioJson.length} files
+${ffmpegCommandString}
+
+for filename in *.vtt; do
+  fname="\${filename%.*}"
+  ffmpeg -i "$filename" "$fname.srt"
+done
+
+find ./*.mp4 -delete
 
 find . -size 0 -delete`
 

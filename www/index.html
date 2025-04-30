@@ -45,7 +45,10 @@
                       <div class="progressBar stats">
                         <div class="bar" :style="'width: ' + (progress[movie.apiID].percent || 100) + '%;'"></div>
                         <div class="stats">
-                          <span v-if="progress[movie.apiID].percent">{{ progress[movie.apiID].percent }} %</span>
+                          <span v-if="progress[movie.apiID].percent">
+                            <span class="countInfo" v-if="progress[movie.apiID].countInfo !== '1/1'">{{ progress[movie.apiID].countInfo }}</span>
+                            {{ progress[movie.apiID].percent }} %
+                          </span>
                           <span v-else>{{ progress[movie.apiID].size }}</span>
                         </div>
                       </div>
@@ -98,6 +101,10 @@
                         <div class="langs subs" v-if="movie.info.subLangs">
                           <span>UT</span>
                           <span v-for="lang in movie.info.subLangs">{{ lang }}</span>
+                        </div>
+                        <div class="features" v-if="movie.info.features">
+                          <span>Merkmale</span>
+                          <span v-for="feature in movie.info.features">{{ feature }}</span>
                         </div>
                         <div class="combi">
                           <div class="restrictions" v-if="movie.info.restrictions">
@@ -171,6 +178,10 @@
                         <div class="langs subs" v-if="movie.subLangs">
                           <span>Untertitel</span>
                           <span v-for="lang in movie.subLangs">{{ lang }}</span>
+                        </div>
+                        <div class="features" v-if="movie.features">
+                          <span>Merkmale</span>
+                          <span v-for="feature in movie.features">{{ feature }}</span>
                         </div>
                         <div class="combi">
                           <div class="restrictions" v-if="movie.restrictions">

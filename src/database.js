@@ -283,25 +283,43 @@ async function getAllSettings () {
     includeSubtitles: true,
 
     channelSelection: [
-      {
-        name: 'ZDF',
-        active: true,
-      }, {
-        name: 'ZDFneo',
-        active: true,
-      }, {
-        name: '3sat',
-        active: true,
-      }, {
-        name: 'Arte',
-        active: true,
-      }
+      { name: 'ZDF', active: true },
+      { name: 'ZDFneo', active: true },
+      { name: '3sat', active: true },
+      { name: 'Arte', active: true },
+      { name: 'ARD', active: true },
+      { name: 'ARD alpha', active: true },
+      { name: 'Das Erste', active: true },
+      { name: 'BR', active: true },
+      { name: 'HR', active: true },
+      { name: 'MDR', active: true },
+      { name: 'NDR', active: true },
+      { name: 'rbb', active: true },
+      { name: 'SR', active: true },
+      { name: 'SWR', active: true },
+      { name: 'WDR', active: true },
+      { name: 'ONE', active: true },
+      { name: 'funk', active: true },
+      { name: 'KIKA', active: true }
     ]
   }
 
-  return entries?.[0]?.settings
-    ? { ...defaults, ...entries?.[0]?.settings }
-    : defaults
+  if (entries?.[0]?.settings) {
+    // Ensure changes to the defaults get added for existing installs
+    const settings = { ...defaults, ...entries?.[0]?.settings }
+
+    // Add potential new additions to settings channel selection
+    const defaultsChannels = defaults.channelSelection.map(x => x.name)
+    const settingsChannels = settings.channelSelection.map(x => x.name)
+    for (let i = 0; i < defaultsChannels.length; i++) {
+      if (settingsChannels.indexOF(defaultsChannels[i]) === -1) {
+        settings.channelSelection.push({ name: defaultsChannels[i], active: true })
+      }
+    }
+
+    return settings
+  }
+  return defaults
 }
 async function updateSettings (settings) {
   db.settings.updateAsync({
