@@ -247,6 +247,7 @@ b {
 }
 #subMenu nav img {
   cursor: pointer;
+  max-width: 5rem;
   filter: grayscale(1);
   transition: filter 250ms ease-in-out;
   padding: .4rem .5rem;
@@ -549,10 +550,15 @@ article .failInfo {
 .langs,
 .restrictions,
 .combi,
-.extra {
+.extra,
+.features {
   display: flex;
   gap: .8rem;
   flex-wrap: wrap;
+}
+.features span:first-child {
+  background-color: var(--purple);
+  color: #000;
 }
 .langs span:first-child {
   background-color: var(--light3);

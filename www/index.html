@@ -102,6 +102,10 @@
                           <span>UT</span>
                           <span v-for="lang in movie.info.subLangs">{{ lang }}</span>
                         </div>
+                        <div class="features" v-if="movie.info.features">
+                          <span>Merkmale</span>
+                          <span v-for="feature in movie.info.features">{{ feature }}</span>
+                        </div>
                         <div class="combi">
                           <div class="restrictions" v-if="movie.info.restrictions">
                             <span :class="{ age6: restriction.indexOf('FSK6') > -1, age12: restriction.indexOf('FSK12') > -1, age16: restriction.indexOf('FSK16') > -1, age18: restriction.indexOf('FSK18') > -1, }" v-for="restriction in movie.info.restrictions">{{ restriction }}</span>
@@ -174,6 +178,10 @@
                         <div class="langs subs" v-if="movie.subLangs">
                           <span>Untertitel</span>
                           <span v-for="lang in movie.subLangs">{{ lang }}</span>
+                        </div>
+                        <div class="features" v-if="movie.features">
+                          <span>Merkmale</span>
+                          <span v-for="feature in movie.features">{{ feature }}</span>
                         </div>
                         <div class="combi">
                           <div class="restrictions" v-if="movie.restrictions">
