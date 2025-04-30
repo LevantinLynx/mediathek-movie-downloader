@@ -312,7 +312,7 @@ async function getAllSettings () {
     const defaultsChannels = defaults.channelSelection.map(x => x.name)
     const settingsChannels = settings.channelSelection.map(x => x.name)
     for (let i = 0; i < defaultsChannels.length; i++) {
-      if (settingsChannels.indexOF(defaultsChannels[i]) === -1) {
+      if (settingsChannels.indexOf(defaultsChannels[i]) === -1) {
         settings.channelSelection.push({ name: defaultsChannels[i], active: true })
       }
     }
