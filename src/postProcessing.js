@@ -59,16 +59,19 @@ async function downloadPostProcessing (movie) {
         logger.debug('[POSTPROCESSING] Movie file detected')
       } else if (subtitleFile.match(file)) {
         logger.debug('[POSTPROCESSING] Subtitle file detected')
+        if (movie.title.indexOf('.') === -1) {
+          const parts = file.split('.')
+          parts.shift()
+          const cleanFileName = `${movie.title}.${parts.join('.')}`
 
-        const parts = file.replace('.vtt', '').split('.')
-        const lang = parts.pop()
-        const cleanFileName = `${movie.title}${lang.length === 3 ? `.${lang}` : ''}.vtt`
-
-        logger.debug(`[POSTPROCESSING] Renaming subtitle "${file}" to "${cleanFileName}"…`)
-        await fs.move(
-          path.join(movie.baseDownloadPath, file),
-          path.join(movie.baseDownloadPath, cleanFileName)
-        )
+          if (file !== cleanFileName) {
+            logger.debug(`[POSTPROCESSING] Renaming subtitle "${file}" to "${cleanFileName}"…`)
+            await fs.move(
+              path.join(movie.baseDownloadPath, file),
+              path.join(movie.baseDownloadPath, cleanFileName)
+            )
+          }
+        }
       }
     }
   }

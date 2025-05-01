@@ -81,7 +81,7 @@ async function ytDlpDownloader (movie) {
   serverEvents.emit('startDownloadProgressJob')
 
   if (multiVideoDownload) {
-    const { multiVideoOptions, files } = downloadOptions
+    const { multiVideoOptions } = downloadOptions
     logger.info(`[YT-DLP] Starting multi video download of ${multiVideoOptions.length} files for "${movie.title}" …`)
     for (let i = 0; i < multiVideoOptions.length; i++) {
       await ytDlpDownloadProcess(movie, multiVideoOptions[i], `${i + 1}/${multiVideoOptions.length}`)
@@ -420,7 +420,7 @@ async function getArdGroupParametersForYtdlp (movie) {
 
   // Add video file to options and info
   multiOptions.files.push({
-    file: `${videoFile.format_id}.${videoFile.language}.mp4`.replace(' ', '_'),
+    file: `${videoFile.format_id}_${videoFile.language}.mp4`.replace(' ', '_'),
     language: `${videoFile.language.split('-')[0]}`,
     rawLanguage: `${videoFile.language}`,
     video: true
@@ -428,7 +428,7 @@ async function getArdGroupParametersForYtdlp (movie) {
   const videoFileOptions = [
     ...downloadOptions,
     '-f', `${videoFile.format_id}`,
-    '-o', `${videoFile.format_id}.${videoFile.language}.mp4`.replace(' ', '_')
+    '-o', `${videoFile.format_id}_${videoFile.language}.mp4`.replace(' ', '_')
   ]
   if (settings.includeSubtitles) videoFileOptions.push('--all-subs')
   multiOptions.multiVideoOptions.push(videoFileOptions)
@@ -437,14 +437,14 @@ async function getArdGroupParametersForYtdlp (movie) {
   for (let i = 1; i < defaultAudioVideo.length; i++) {
     const formatObject = getVideoForAudioIdentifier(defaultAudioVideo[i].lang, true)
     multiOptions.files.push({
-      file: `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_'),
+      file: `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_'),
       language: `${formatObject.language.split('-')[0]}`,
       rawLanguage: `${formatObject.language}`
     })
     multiOptions.multiVideoOptions.push([
       ...downloadOptions,
       '-f', `${formatObject.format_id}`,
-      '-o', `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_')
+      '-o', `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_')
     ])
   }
 
@@ -454,14 +454,14 @@ async function getArdGroupParametersForYtdlp (movie) {
     for (let i = 0; i < audioTranscriptions.length; i++) {
       const formatObject = getVideoForAudioIdentifier(audioTranscriptions[i].lang, true)
       multiOptions.files.push({
-        file: `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_'),
+        file: `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_'),
         language: `${formatObject.language.split('-')[0]}`,
         rawLanguage: `${formatObject.language}`
       })
       multiOptions.multiVideoOptions.push([
         ...downloadOptions,
         '-f', `${formatObject.format_id}`,
-        '-o', `${formatObject.format_id}.${formatObject.language}.mp4`.replace(' ', '_')
+        '-o', `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_')
       ])
     }
   }

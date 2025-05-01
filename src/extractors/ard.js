@@ -36,7 +36,10 @@ async function scrapeArdMovieData () {
       _.uniq(
         movieList
           .map(movie => movie.channel)
-          .filter(channel => channel && ['3sat', 'swr', 'kika'].indexOf(channel) === -1)
+          .filter(channel => channel && [
+            'ard', 'ard_alpha', 'das_erste', 'br', 'hr', 'mdr', 'ndr',
+            'rbb', 'sr', 'swr', 'wdr', 'one', 'funk', 'kika'
+          ].indexOf(channel) > -1)
       ).sort()
     )
     logger.debug(channels, movieList.map(x => x.title))
