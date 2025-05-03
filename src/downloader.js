@@ -43,6 +43,11 @@ async function checkForScheduledDownloads () {
 
 async function downloadMovie (movie) {
   try {
+    // @FIXME remove in 2-3 weeks
+    if (movie.downloadUrl.indexOf('zdf.de') > -1 && movie.downloadUrl.indexOf('.html') > -1) {
+      movie.downloadUrl = movie.downloadUrl.replace('.html', '')
+    }
+    // @FIXME remove in 2-3 weeks
     const settings = await db.getAllSettings()
     await db.setScheduleEntryInProgress(movie, true)
 
@@ -226,7 +231,7 @@ async function getParametersForYtdlp (movie) {
     }
   } else if (['zdf', 'zdfneo', '3sat'].indexOf(movie.channel) > -1) {
     // Get video info
-    const info = await ytDlp.getVideoInfo(downloadOptions)
+    const info = await ytDlp.getVideoInfo([...downloadOptions, '-f', 'b'])
     if (process.env.NODE_ENV === 'development') {
       await Bun.write(
         path.join(movie.baseDownloadPath, `ytdlp_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
@@ -367,7 +372,7 @@ async function getArdGroupParametersForYtdlp (movie) {
   }
 
   // Get video info
-  const info = await ytDlp.getVideoInfo(downloadOptions)
+  const info = await ytDlp.getVideoInfo([...downloadOptions, '-f', 'b'])
   if (process.env.NODE_ENV === 'development') {
     await Bun.write(
       path.join(movie.baseDownloadPath, `ytdlp_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),

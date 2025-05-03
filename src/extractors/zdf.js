@@ -38,14 +38,6 @@ async function scrapeZdfMovieData () {
 
     movieList = _.orderBy(movieList, ['time.type', 'time.date'], ['desc', 'asc'])
 
-    // @TODO: REMOVE AFTER FIX!
-    // HACK UNTILL YT-DLP IS FIXED
-    movieList.map(movie => {
-      if (movie.url.indexOf('.html') === -1) movie.url = `${movie.url}.html`
-      return movie
-    })
-    // HACK UNTILL YT-DLP IS FIXED END
-
     const channels = _.uniq(movieList.map(movie => movie.channel)).sort()
     logger.debug(channels, movieList.map(x => x.url))
     const dataByChannel = {}
