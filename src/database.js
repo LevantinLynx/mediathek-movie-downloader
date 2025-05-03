@@ -14,23 +14,23 @@ const db = {
 }
 async function initialize () {
   // Initialize all databases
-  logger.debug('[DB] Initializing databases...')
+  logger.info('[DB] Initializing databases...')
   db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule.db'), autoload: true })
   db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
   db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
   db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
   db.ignore = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
   db.done = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
-  logger.debug('[DB] Done initializing databases.')
+  logger.info('[DB] Done initializing databases.')
 
-  logger.debug('[DB] Resetting lingering progress entries.')
+  logger.info('[DB] Resetting lingering progress entries.')
   const scheduleItems = await getScheduleData()
   for (let i = 0; i < scheduleItems.length; i++) {
     if (scheduleItems[i].inProgress) {
       await setScheduleEntryInProgress(scheduleItems[i], false)
     }
   }
-  logger.debug('[DB] Done resetting lingering progress entries.')
+  logger.info('[DB] Done resetting lingering progress entries.')
 }
 
 // ****************** //

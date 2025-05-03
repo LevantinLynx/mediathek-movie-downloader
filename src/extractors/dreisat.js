@@ -110,7 +110,7 @@ async function scrape3satMovieData () {
 
     logger.debug(movieList)
 
-    logger.info(`Done! 3sat Movies found: ${movieList?.length}`)
+    logger.info(`[3SAT API] Movies found: ${movieList?.length}`)
     return movieList
   } catch (err) {
     logger.error('Error while loading movie json data via axios …')

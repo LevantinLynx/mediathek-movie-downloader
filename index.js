@@ -46,23 +46,34 @@ io.on('connection', async socket => {
   socket.on('forceMetaDataUpdate', () => serverEvents.emit('forceMetaDataUpdate'))
 })
 
-logger.debug('[SERVER] Ensure all required dirs are created...')
-// Ensure downloads directory exists
-fs.ensureDirSync(path.join(__dirname, 'downloads'))
-// Ensure yt-dlp directory exists
-fs.ensureDirSync(path.join(__dirname, 'src', 'bin'))
+async function initializeServer () {
+  logger.info('[SERVER] Ensure all required dirs are created...')
+  // Ensure downloads directory exists
+  fs.ensureDirSync(path.join(__dirname, 'downloads'))
+  // Ensure yt-dlp directory exists
+  fs.ensureDirSync(path.join(__dirname, 'src', 'bin'))
 
-logger.info('[SERVER] Downloading yt-dlp...')
-// ensure yt-dlp is downloaded
-await YTDlpWrap.downloadFromGithub(path.join(__dirname, 'src', 'bin', 'yt-dlp'))
+  logger.info('[SERVER] Downloading yt-dlp...')
+  // ensure yt-dlp is downloaded
+  await YTDlpWrap.downloadFromGithub(path.join(__dirname, 'src', 'bin', 'yt-dlp'))
 
-await db.initialize()
+  const ytDlp = new YTDlpWrap(path.join(__dirname, 'src', 'bin', 'yt-dlp'))
 
-// Start cron jobs
-cron.scheduleCheckJob.start()
-logger.info('[CRON] Schedule checker will run @', cron.scheduleCheckJob.cronTime.source)
-cron.metaDataUpdateJob.start()
-logger.info('[CRON] Meta data will be updated @', cron.metaDataUpdateJob.cronTime.source)
+  logger.info('[YT-DLP] Version:', `${await ytDlp.getVersion()}`.trim())
+
+  await db.initialize()
+
+  // Start express server
+  server.listen(process.env.SERVER_PORT || 12345, '0.0.0.0', () => {
+    logger.info(`[SERVER] http/ws server listening on http://0.0.0.0:${process.env.SERVER_PORT || 12345}`)
+  })
+
+  // Start cron jobs
+  cron.scheduleCheckJob.start()
+  logger.info('[CRON] Schedule checker will run @', cron.scheduleCheckJob.cronTime.source)
+  cron.metaDataUpdateJob.start()
+  logger.info('[CRON] Meta data will be updated @', cron.metaDataUpdateJob.cronTime.source)
+}
 
 // DB event listeners
 db.events.on('availableMovieMetaDataUpdate', async () => {
@@ -106,7 +117,4 @@ serverEvents.on('stopDownloadProgressJob', async () => {
   }
 })
 
-// Start express server
-server.listen(process.env.SERVER_PORT || 12345, '0.0.0.0', () => {
-  logger.info(`[SERVER] http/ws server listening on http://0.0.0.0:${process.env.SERVER_PORT || 12345}`)
-})
+initializeServer()

@@ -49,6 +49,7 @@ async function scrapeZdfMovieData () {
           return movie
         })
     }
+    logger.info(`[ZDF API] Movies found: ${movieIDs?.length}`)
     return dataByChannel
   } catch (err) {
     logger.error(err)

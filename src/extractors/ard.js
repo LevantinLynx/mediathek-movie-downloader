@@ -53,6 +53,7 @@ async function scrapeArdMovieData () {
         })
     }
 
+    logger.info(`[ARD API] Movies found: ${movieList?.length}`)
     return dataByChannel
   } catch (err) {
     logger.error(err)

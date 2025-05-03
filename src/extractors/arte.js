@@ -93,6 +93,7 @@ async function scrapeArteCinemaMovieData () {
       'apiID'
     )
 
+    logger.info(`[ARTE API] Movies found: ${movieList?.length}`)
     return _.orderBy(movieList, ['time.type', 'time.date'], ['desc', 'asc'])
   } catch (err) {
     logger.error('Error while loading movie json data via axios …')
