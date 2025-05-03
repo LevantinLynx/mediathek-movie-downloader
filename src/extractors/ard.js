@@ -30,7 +30,7 @@ async function scrapeArdMovieData () {
     }
 
     movieList = _.orderBy(movieList, ['time.date'], ['asc'])
-    movieList = _.uniqBy(_.flatten(movieList), 'title')
+    movieList = _.uniqBy(_.flatten(movieList), 'url')
 
     const channels = _.compact(
       _.uniq(
@@ -76,7 +76,7 @@ function normalizeMovieData (rawMovieData) {
     const movieDate = new Date(availableTo)
 
     const movie = {
-      title: `${shortTitle}`.split(' | ')[0],
+      title: `${shortTitle}`.split(' | ')[0].trim(),
       url: `https://ardmediathek.de/video/${rawMovieData.links?.target?.urlId}`,
       img: images.aspect16x9?.src?.replace('{width}', 768),
       imgCover: images.aspect3x4?.src?.replace('{width}', 320),
