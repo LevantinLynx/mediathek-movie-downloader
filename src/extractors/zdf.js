@@ -1,6 +1,7 @@
 const _ = require('lodash')
 const logger = require('../logger.js')
 const { default: axios } = require('axios')
+const { JSDOM } = require('jsdom')
 const {
   parse: parseDate,
   addHours
@@ -26,6 +27,9 @@ async function scrapeZdfMovieData () {
 
     const apiMovies = await getAvailableMoviesFromApi()
     if (apiMovies) movies.push(apiMovies)
+
+    const highlightIDs = await getHighlightsFromCarousel()
+    if (highlightIDs) movies.push(highlightIDs)
 
     movies = _.flatten(movies)
     const movieIDs = _.uniqBy(movies, 'id').map(movie => movie.id)
@@ -69,10 +73,29 @@ async function getMovieInfoFromApi (ID) {
       }
     })
 
-    if (!currentRequestresponse?.document?.id === ID) throw new Error(`Api request for "${ID}" failed!`)
+    if (currentRequestresponse?.document?.id !== ID) throw new Error(`Api request for "${ID}" failed!`)
     logger.debug(`[API ZDF] MOVIE DONE ${currentApiUrl}`)
 
     return currentRequestresponse
+  } catch (err) {
+    logger.error(err.message)
+    return null
+  }
+}
+
+async function getHighlightsFromCarousel () {
+  try {
+    const { data: websiteHtml } = await axios.get('https://www.zdf.de')
+
+    const websiteAsElement = new JSDOM(websiteHtml).window.document
+    const elements = websiteAsElement.querySelectorAll('div[aria-label="Unsere Spielfilm-Highlights"] a')
+
+    const IDs = []
+    for (let i = 1; i < elements.length; i++) {
+      IDs.push({ id: elements[i].attributes.href.value.split('/').pop().replace('-movie', '') })
+    }
+
+    return IDs
   } catch (err) {
     logger.error(err)
   }
@@ -80,6 +103,7 @@ async function getMovieInfoFromApi (ID) {
 
 function normalizeMovieData (rawMovieData) {
   try {
+    if (!rawMovieData) return null
     const entry = rawMovieData.document ? rawMovieData.document : rawMovieData
     let movieDate = new Date(entry.offlineAvailability)
 
