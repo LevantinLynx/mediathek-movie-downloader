@@ -651,6 +651,9 @@ article p:not(:last-child) {
   flex-direction: column;
   gap: 2rem;
 }
+.inProgress article aside figure {
+  width: 100%;
+}
 .movieProgress {
   display: flex;
   flex-direction: column;

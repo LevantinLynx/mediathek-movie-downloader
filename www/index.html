@@ -37,10 +37,13 @@
                 </header>
                 <div class="done">
                   <aside class="thumbnail">
-                    <image-intersection-fade-in-blured-bg :src="movie.info.img" :alt="movie.title + ' Thumbnail'"></image-intersection-fade-in-blured-bg>
+                    <figure>
+                      <image-intersection-fade-in-blured-bg v-if="movie.info?.img" :src="movie.info?.img" :alt="movie.info?.title"></image-intersection-fade-in-blured-bg>
+                      <image-intersection-fade-in-blured-bg v-else src="/imgs/movie_image_placeholder.svg" alt="Kein Bild gefunden"></image-intersection-fade-in-blured-bg>
+                    </figure>
                   </aside>
                   <main class="movieProgress">
-                    <p>{{ movie.info.description}}</p>
+                    <p v-if="movie.info">{{ movie.info.description}}</p>
                     <div v-if="progress[movie.apiID]">
                       <div class="progressBar stats">
                         <div class="bar" :style="'width: ' + (progress[movie.apiID].percent || 100) + '%;'"></div>
@@ -824,7 +827,6 @@ const app = new Vue({
         const movieData = channelData.filter(x => x.apiID === apiID)[0]
         return movieData
       } catch (err) {
-        console.error(err)
         console.error('Es konnte kein Film mit den angebenen Daten ermittelt werden!')
         return null
       }
