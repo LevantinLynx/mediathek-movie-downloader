@@ -72,7 +72,7 @@ async function initializeServer () {
   cron.scheduleCheckJob.start()
   logger.info('[CRON] Schedule checker will run @', cron.scheduleCheckJob.cronTime.source)
   cron.metaDataUpdateJob.start()
-  logger.info('[CRON] Meta data will be updated @', cron.metaDataUpdateJob.cronTime.source)
+  logger.info('[CRON] Meta data will be updated @', new Date(cron.metaDataUpdateJob.nextDate()).toLocaleString('de-DE'))
 }
 
 // DB event listeners

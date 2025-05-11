@@ -31,19 +31,19 @@ const downloadProgressJob = CronJob.from({
 })
 
 CronJob.from({
-  cronTime: '0 1 6 * * *',
+  cronTime: '0 55 5 * * *',
   onTick: () => {
     const time = new CronTime(getRandomMetaDataRefreshCronTime())
     metaDataUpdateJob.setTime(time)
     io.emit('nextMetaDataUpdateDate', metaDataUpdateJob.nextDate())
-    logger.info('[CRON] Meta data will be updated @', metaDataUpdateJob.cronTime.source)
+    logger.info('[CRON] Meta data will be updated @', new Date(metaDataUpdateJob.nextDate()).toLocaleString('de-DE'))
   },
   start: true,
   timeZone: 'Europe/Berlin'
 })
 
 function getRandomMetaDataRefreshCronTime () {
-  return `${getRandomInteger(0, 59)} ${getRandomInteger(5, 55)} ${shuffleArray([0, 1, 2, 3, 4, 5, 23]).pop()} * * *`
+  return `${getRandomInteger(0, 59)} ${getRandomInteger(0, 54)} ${shuffleArray([2, 3, 4, 5]).pop()} * * *`
 }
 
 serverEvents.on('forceMetaDataUpdate', () => startMetaDataRefreshJob(true))
