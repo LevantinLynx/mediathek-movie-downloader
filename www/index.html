@@ -395,7 +395,7 @@
                     <h2>Sprachen etc.</h2>
                   </header>
                   <div class="box">
-                    <label class="top">Beforzugte Audiosprache</label>
+                    <label class="top">Bevorzugte Audiosprache</label>
                     <div class="flexGrp flexSplit">
                       <input type="radio" name="preferedDownloadLanguage" id="ger" value="de" v-model="settings.preferedDownloadLanguage">
                       <label for="ger">Deutsch</label>
@@ -436,13 +436,13 @@
                   </header>
                   <div class="box">
                     <p>
-                      Die Automatik läd zufällig zwischen 23 und 6 Uhr einmal Täglich die Daten.
+                      Die Automatik lädt zufällig zwischen 2 und 6 Uhr einmal Täglich die Daten.
                     </p>
                     <p v-if="nextMetaDataUpdateDate">
                       Nächster geplanter Abruf: <b>{{ new Date(nextMetaDataUpdateDate).toLocaleString('de-DE') }}</b>
                     </p>
                     <p>
-                      Um die APIs nicht zu überladen, wird täglich um 6:01 Uhr eine zufällige neue Zeit für den Abruf generiert.
+                      Um die APIs nicht zu überladen, wird täglich um 5:55 Uhr eine zufällige neue Zeit für den Abruf generiert.
                     </p>
                     <p>
                       Achtung: Einige APIs geben unvollständige Daten zurück,
