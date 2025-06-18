@@ -17,11 +17,13 @@ const scheduleCheckJob = CronJob.from({
 })
 
 const metaDataUpdateJob = CronJob.from({
-  cronTime: getRandomMetaDataRefreshCronTime(),
+  cronTime: '0 0 0 * * *',
   onTick: async () => startMetaDataRefreshJob(),
-  start: true,
+  start: false,
   timeZone: 'Europe/Berlin'
 })
+metaDataUpdateJob.setTime(new CronTime(getRandomMetaDataRefreshCronTime()))
+metaDataUpdateJob.start()
 
 const downloadProgressJob = CronJob.from({
   cronTime: '* * * * * *',
@@ -43,7 +45,7 @@ CronJob.from({
 })
 
 function getRandomMetaDataRefreshCronTime () {
-  return `${getRandomInteger(0, 59)} ${getRandomInteger(0, 54)} ${shuffleArray([2, 3, 4, 5]).pop()} * * *`
+  return `${getRandomInteger(0, 59)} ${getRandomInteger(0, 54)} ${shuffleArray([2, 3, 4]).pop()} * * *`
 }
 
 serverEvents.on('forceMetaDataUpdate', () => startMetaDataRefreshJob(true))
