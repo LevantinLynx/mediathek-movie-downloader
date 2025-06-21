@@ -39,6 +39,8 @@ services:
     container_name: mediathek-movie-downloader
     image: 'levantinlynx/mediathek-movie-downloader:latest'
     restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin
     volumes:
       - '/pfad/zum/downloads/ordner:/usr/src/app/downloads'
       - '/pfad/zum/datenbank/ordner:/usr/src/app/db'
