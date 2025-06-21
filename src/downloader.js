@@ -262,14 +262,15 @@ async function getParametersForYtdlp (movie) {
         downloadOptions.push('-f')
 
         let formatOptionString = await getFfmpegVideoResolutionOption()
-
+        const { iso_639_1: iso639v1, iso_639_2: iso639v2 } = getIso639Info(settings.preferedDownloadLanguage)
+        const preferedAudioArray = [iso639v1, iso639v2]
         if (settings?.preferedDownloadLanguage) {
-          const preferedAudio = audioOnlyLanguages.filter(a => a.lang === settings.preferedDownloadLanguage)
+          const preferedAudio = audioOnlyLanguages.filter(a => preferedAudioArray.indexOf(a.lang) > -1)
           for (let i = 0; i < preferedAudio.length; i++) {
             formatOptionString += `+ba[language=${preferedAudio[i].lang}]`
             audioList.push(preferedAudio[i])
           }
-          const remainingAudio = audioOnlyLanguages.filter(a => a.lang !== settings.preferedDownloadLanguage)
+          const remainingAudio = audioOnlyLanguages.filter(a => preferedAudioArray.indexOf(a.lang) === -1)
           for (let i = 0; i < remainingAudio.length; i++) {
             formatOptionString += `+ba[language=${remainingAudio[i].lang}]`
             audioList.push(remainingAudio[i])
