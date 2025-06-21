@@ -153,6 +153,10 @@ function normalizeMovieData (rawMovieData) {
       }).sort()
     }
 
+    if (!movie.description && rawMovieData?.shortText?.text) {
+      movie.description = rawMovieData.shortText.text
+    }
+
     if (movie.restrictions.length === 0) delete movie.restrictions
     if (movie.audioLangs.length === 0) delete movie.audioLangs
     if (movie.subLangs.length === 0) delete movie.subLangs
