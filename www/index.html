@@ -155,7 +155,10 @@
           </section>
         </div>
         <div class="content" v-show="pageSelected === 'upcoming'">
-          <section v-for="channel in availableMovieMetaData" v-show="channelSelected === channel.channel" :id="channel.channel" :key="channel.channel">
+          <section v-for="channel in availableMovieMetaData"
+            v-show="channelSelected === channel.channel && filteredMovieList(channel?.movies)?.length > 0"
+            :id="channel.channel"
+            :key="channel.channel">
             <aside>
               <h1>Verfügbare Filme <small>{{ selectedChannelMovieCount }}/{{ movieCount }}</small></h1>
             </aside>
@@ -756,14 +759,15 @@ const app = new Vue({
       const channels = this.availableMovieMetaData.length > 0
       if (channels) {
         const list = []
-
         for (let i = 0; i < this.availableMovieMetaData.length; i++) {
           const entry = this.availableMovieMetaData[i]
-          list.push({
-            channel: entry.channel,
-            logo: entry.logo,
-            logoHeight: entry.channel === 'arte' ? '16px' : '22px',
-          })
+          if (this.filteredMovieList(entry.movies)?.length > 0) {
+            list.push({
+              channel: entry.channel,
+              logo: entry.logo,
+              logoHeight: entry.channel === 'arte' ? '16px' : '22px',
+            })
+          }
         }
         return list
       }
@@ -861,6 +865,9 @@ const app = new Vue({
     },
     shouldShowMovie (apiID) {
       return this.hideFromUpcomingList?.indexOf(apiID) === -1
+    },
+    filteredMovieList (movies) {
+      return movies.filter(movie => this.shouldShowMovie(movie.apiID))
     },
     removeEntryFromFinished (apiID) {
       if (apiID) this.socket.emit('removeEntryFromFinished', apiID)
