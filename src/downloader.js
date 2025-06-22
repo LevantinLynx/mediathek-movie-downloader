@@ -244,18 +244,41 @@ async function getParametersForYtdlp (movie) {
     const audioOnlyFormats = info?.formats?.filter(format => format.vcodec === 'none') || []
     // Get all available audio only language codes
     const audioOnlyLanguages = _.uniqBy(
-      audioOnlyFormats.map(format => {
+      audioOnlyFormats.reverse().map(format => {
         return {
-          id: format.format_id.replace(/[0-9]+/g, ''),
-          lang: format.language
+          id: format.format_id,
+          lang: format.language,
+          filterID: format.format_id.replace(/[0-9]+/g, '')
         }
       }),
-      'lang'
+      'filterID'
     )
-    logger.debug('[YT-DLP] Available audio languages:', audioOnlyLanguages)
+
+    // Filter and sort audio only formats by type
+    let audioFormats = []
+    for (let i = 0; i < audioOnlyLanguages.length; i++) {
+      let sortKey = 'A'
+      if (audioOnlyLanguages[i].id.indexOf('Audiodeskription') > -1) sortKey = 'Z'
+      else if (audioOnlyLanguages[i].id.indexOf('Klare_Sprache') > -1) sortKey = 'X'
+
+      let shouldAddAudio = true
+      if (sortKey === 'Z' && !settings.includeAudioTranscription) shouldAddAudio = false
+      if (sortKey === 'X' && !settings.includeClearLanguage) shouldAddAudio = false
+
+      if (shouldAddAudio) {
+        audioFormats.push({
+          id: audioOnlyLanguages[i].id,
+          lang: audioOnlyLanguages[i].lang,
+          order: `${sortKey}${audioOnlyLanguages[i].lang.toUpperCase()}${`000${i}`.slice(-4)}`
+        })
+      }
+    }
+    audioFormats = _.sortBy(audioFormats, ['order'])
+
+    logger.debug('[YT-DLP] Available audio languages:', audioFormats)
 
     if (audioOnlyFormats.length > 0) {
-      if (audioOnlyLanguages.length > 1) {
+      if (audioFormats.length > 1) {
         // Enable multiple audio streams in final file
         downloadOptions.push('--audio-multistreams')
         // Format selector
@@ -265,29 +288,27 @@ async function getParametersForYtdlp (movie) {
         const { iso_639_1: iso639v1, iso_639_2: iso639v2 } = getIso639Info(settings.preferedDownloadLanguage)
         const preferedAudioArray = [iso639v1, iso639v2]
         if (settings?.preferedDownloadLanguage) {
-          const preferedAudio = audioOnlyLanguages.filter(a => preferedAudioArray.indexOf(a.lang) > -1)
+          const preferedAudio = audioFormats.filter(a => preferedAudioArray.indexOf(a.lang) > -1)
           for (let i = 0; i < preferedAudio.length; i++) {
-            formatOptionString += `+ba[language=${preferedAudio[i].lang}]`
+            formatOptionString += `+${preferedAudio[i].id}`
             audioList.push(preferedAudio[i])
           }
-          const remainingAudio = audioOnlyLanguages.filter(a => preferedAudioArray.indexOf(a.lang) === -1)
+          const remainingAudio = audioFormats.filter(a => preferedAudioArray.indexOf(a.lang) === -1)
           for (let i = 0; i < remainingAudio.length; i++) {
-            formatOptionString += `+ba[language=${remainingAudio[i].lang}]`
+            formatOptionString += `+${remainingAudio[i].id}`
             audioList.push(remainingAudio[i])
           }
         } else {
-          for (let i = 0; i < audioOnlyLanguages.length; i++) {
-            formatOptionString += `+ba[language=${audioOnlyLanguages[i].lang}]`
-            audioList.push(audioOnlyLanguages[i])
+          for (let i = 0; i < audioFormats.length; i++) {
+            formatOptionString += `+${audioFormats[i].id}`
+            audioList.push(audioFormats[i])
           }
         }
 
         // Add format options
         downloadOptions.push(formatOptionString)
-      } else if (audioOnlyLanguages.length === 1) {
-        for (let i = 0; i < audioOnlyLanguages.length; i++) {
-          audioList.push(audioOnlyLanguages[i])
-        }
+      } else if (audioFormats.length === 1) {
+        audioList.push(audioFormats[0])
       }
     } else {
       const formats = [...info.formats].reverse()
@@ -497,7 +518,7 @@ async function createAudioAndPostProcessingFiles (movie, audioList) {
       audioEntry.iso_639_2 = isoCodeInfo.iso_639_2
       audioEntry.title = `${isoCodeInfo.german}`
 
-      if (audioID.indexOf('_Audiodeskription_') > -1) audioEntry.title += ' (Audiodeskription)'
+      if (audioID.indexOf('Audiodeskription') > -1) audioEntry.title += ' (Audiodeskription)'
       else if (audioID.indexOf('_Klare_Sprache_') > -1) audioEntry.title += ' (klare Sprache)'
       else if (
         audioID.indexOf('Originalton') > -1 ||
