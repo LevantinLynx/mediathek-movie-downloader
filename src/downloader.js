@@ -522,6 +522,7 @@ async function createAudioAndPostProcessingFiles (movie, audioList) {
       else if (audioID.indexOf('_Klare_Sprache_') > -1) audioEntry.title += ' (klare Sprache)'
       else if (
         audioID.indexOf('Originalton') > -1 ||
+        audioID.indexOf('_Original_') > -1 ||
         audioID.indexOf('_VO_') > -1
       ) audioEntry.title += ' (Originalton)'
     }

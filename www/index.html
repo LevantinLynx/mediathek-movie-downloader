@@ -686,7 +686,13 @@ const app = new Vue({
     })
 
     this.socket.on('availableMovieMetaDataUpdate', availableMovieMetaData => {
-      this.availableMovieMetaData = availableMovieMetaData
+      this.availableMovieMetaData = availableMovieMetaData.map(channel => {
+        channel.movies.map(movie => {
+          movie.img = movie.img + `#${Date.now()}`
+          return movie
+        })
+        return channel
+      })
     })
     this.socket.on('nextMetaDataUpdateDate', nextMetaDataUpdateDate => {
       this.nextMetaDataUpdateDate = nextMetaDataUpdateDate
