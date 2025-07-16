@@ -156,14 +156,15 @@
         </div>
         <div class="content" v-show="pageSelected === 'upcoming'">
           <section v-for="channel in availableMovieMetaData"
-            v-show="channelSelected === channel.channel && filteredMovieList(channel?.movies)?.length > 0"
+            v-show="channelSelected === channel.channel"
             :id="channel.channel"
             :key="channel.channel">
             <aside>
-              <h1>Verfügbare Filme <small>{{ selectedChannelMovieCount }}/{{ movieCount }}</small></h1>
+              <h1 v-if="filteredMovieList(channel?.movies)?.length > 0">Verfügbare Filme <small>{{ selectedChannelMovieCount }}/{{ movieCount }}</small></h1>
+              <h1 v-else>Momentan sind keine Filme für diesen Sender verfügbar …</h1>
             </aside>
-            <div class="availableList">
-              <article v-for="movie in channel?.movies" v-if="shouldShowMovie(movie.apiID)" :key="movie.apiID + movie.title?.replace(' ','_')">
+            <div class="availableList" v-if="filteredMovieList(channel?.movies)?.length > 0">
+              <article v-for="movie in filteredMovieList(channel.movies)" :key="movie.apiID + movie.title?.replace(' ','_')">
                 <header>
                   <h2>{{ movie.title }}</h2>
                 </header>
@@ -214,10 +215,10 @@
                         </svg><!--
                         -->Beitrag
                       </a>
-                      <button class="button" @click="addEntryToIgnoreList(movie, channel.channel)" style="background-color: var(--red);color:#fff;">
+                      <button class="button" @click="addEntryToIgnoreList(movie, channel.channel, channel)" style="background-color: var(--red);color:#fff;">
                         Ignorieren
                       </button>
-                      <button class="button" @click="addEntryToSchedule(movie, channel.channel)">
+                      <button class="button" @click="addEntryToSchedule(movie, channel.channel, channel)">
                         {{ movie.time?.type === 'untill' ? 'Download' : 'Planen' }}
                       </button>
                     </div>
@@ -225,6 +226,14 @@
                 </main>
               </article>
             </div>
+          </section>
+          <section v-if="availableMovieMetaData?.length === 0">
+            <aside>
+              <h1>Momentan sind keine Filme verfügbar …</h1>
+              <p>
+                Bitte automatische Laden der Meta Daten abwarten oder in den Einstellungen das neu Laden erzwingen.
+              </p>
+            </aside>
           </section>
         </div>
         <div class="content" v-show="pageSelected === 'completed'">
@@ -650,17 +659,16 @@ const app = new Vue({
     this.socket.on('version', versionString => {
       this.version = versionString
     })
-    this.socket.on('settingsUpdate', settings => {
+    this.socket.on('settingsUpdate', async settings => {
       this.settings = settings
 
       if (!this.isInitialized) {
-        // Only set this on first load
-        const activeChannels = settings.channelSelection
-          .filter(channel => channel.active)
-          .map(channel => channel.name.toLowerCase())
-        if (activeChannels.length > 0) {
-          this.channelSelected = activeChannels[0]
+        for (let i = 0; i < 50; i++) {
+          if (this.availableMovieMetaData?.length === 0) await new Promise(resolve => setTimeout(() => resolve(), 200))
+          else break
         }
+
+        this.setNewSelectedChannel()
         this.isInitialized = true
       }
     })
@@ -693,6 +701,7 @@ const app = new Vue({
         })
         return channel
       })
+      if (this.channelSelected === '') this.setNewSelectedChannel()
     })
     this.socket.on('nextMetaDataUpdateDate', nextMetaDataUpdateDate => {
       this.nextMetaDataUpdateDate = nextMetaDataUpdateDate
@@ -706,7 +715,7 @@ const app = new Vue({
         const movie = this.schedule[i]
         if (!movie.info) {
           try {
-            const info = this.getMovieFromChannelByID(movie.apiID, movie.channel)
+            const info = this.getMovieFromChannelByID(movie.apiID, movie.channel, movie.manual)
             if (info) movie.info = info
           } catch (err) {
             console.error(err)
@@ -851,20 +860,10 @@ const app = new Vue({
         this.msg = 'No Url given.'
       }
     },
-    addEntryToSchedule (movie, channel) {
+    addEntryToSchedule (movie, channelName, channel) {
       this.setMsg('processing', `Verarbeite Anfrage für Download von "${movie.title}".`)
-      this.socket.emit('addEntryToSchedule', movie.apiID, channel)
-    },
-    addNewDownloadByUrl (downloadUrl, title) {
-      if (this.msgType === 'processing') return
-      if (downloadUrl) {
-        this.msgType = 'processing'
-        this.msg = `Processing "${title || downloadUrl}" …`
-        this.socket.emit('addDownloadUrltoSchedule', { movieUrl: downloadUrl, title })
-      } else {
-        this.msgType = 'error'
-        this.msg = 'No Url given.'
-      }
+      this.socket.emit('addEntryToSchedule', movie.apiID, channelName)
+      this.checkIfChannelMovieListIsEmpty(channel)
     },
     removeEntryFromSchedule (apiID) {
       if (apiID) this.socket.emit('removeEntryFromSchedule', apiID)
@@ -875,15 +874,35 @@ const app = new Vue({
     filteredMovieList (movies) {
       return movies.filter(movie => this.shouldShowMovie(movie.apiID))
     },
+    async checkIfChannelMovieListIsEmpty (channel) {
+      await new Promise(resolve => setTimeout(() => resolve(), 500))
+      if (this.filteredMovieList(channel.movies)?.length === 0) {
+        this.setNewSelectedChannel()
+      }
+    },
+    setNewSelectedChannel () {
+      const channelsWithMovies = this.availableMovieMetaData
+        .filter(channel => this.filteredMovieList(channel?.movies)?.length > 0)
+
+      if (channelsWithMovies.length > 0) {
+        this.channelSelected = channelsWithMovies[0].channel
+      } else {
+        const activeChannels = this.settings.channelSelection
+          .filter(channel => channel.active)
+          .map(channel => channel.name.toLowerCase())
+        this.channelSelected = activeChannels?.[0] || ''
+      }
+    },
     removeEntryFromFinished (apiID) {
       if (apiID) this.socket.emit('removeEntryFromFinished', apiID)
     },
-    addEntryToIgnoreList (movie,channel) {
+    addEntryToIgnoreList (movie, channelName, channel) {
       this.socket.emit('addEntryToIgnoreList', {
         apiID: movie.apiID,
         title: movie.title,
-        channel: channel
+        channel: channelName
       })
+      this.checkIfChannelMovieListIsEmpty(channel)
     },
     removeEntryFromIgnoreList (apiID) {
       if (apiID) this.socket.emit('removeEntryFromIgnoreList', apiID)
