@@ -68,9 +68,14 @@ async function startMetaDataRefreshJob (isForced) {
 
   metaDataJobRunning = true
   logger.info(`[META DATA] Refreshing available movie data …${isForced ? ' (forced refresh)' : ''}`)
+  const metaTimeout = setTimeout(() => {
+    metaDataJobRunning = false
+    logger.info('[META DATA] REFRESH FAILED & REACHED TIMEOUT!')
+  }, 15 * 60 * 1000)
   const availableMovieMetaData = await getAvailableMovieMetaDataFromApis()
   db.updateAvailableMovieMetaData(availableMovieMetaData)
   metaDataJobRunning = false
+  clearTimeout(metaTimeout)
   logger.info('[META DATA] DONE Refreshing available movie data …')
 }
 
