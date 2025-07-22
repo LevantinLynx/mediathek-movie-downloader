@@ -1,6 +1,6 @@
 {
   "name": "mediathek-movie-downloader",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "main": "index.js",
   "license": "MIT",
   "private": true,
@@ -14,9 +14,9 @@
     "standard": "^17.1.2"
   },
   "dependencies": {
-    "@seald-io/nedb": "^4.1.1",
-    "axios": "^1.9.0",
-    "cron": "^4.3.0",
+    "@seald-io/nedb": "^4.1.2",
+    "axios": "^1.10.0",
+    "cron": "^4.3.2",
     "date-fns": "^4.1.0",
     "express": "^5.1.0",
     "fs-extra": "^11.3.0",
