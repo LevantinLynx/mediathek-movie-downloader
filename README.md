@@ -27,6 +27,7 @@ docker run \
   -p 12345:12345 \
   -v /pfad/zum/downloads/ordner:/usr/src/app/downloads \
   -v /pfad/zum/datenbank/ordner:/usr/src/app/db \
+  -v /pfad/zum/cache/ordner:/usr/src/app/cache \
   --restart unless-stopped \
   levantinlynx/mediathek-movie-downloader:latest
 ```
