@@ -4,7 +4,8 @@ const { default: axios } = require('axios')
 const { formatDate } = require('date-fns')
 const { JSDOM } = require('jsdom')
 const {
-  getRandomUserAgent
+  getRandomUserAgent,
+  cacheImageAndGenerateCachedLink
 } = require('../helperFunctions.js')
 
 const extractor = {
@@ -15,7 +16,7 @@ const extractor = {
   channel: '3sat'
 }
 
-async function scrape3satMovieData () {
+async function scrape3satMovieData (cachedImageFileHashList) {
   try {
     const movieUrls = await getAvailabeMovieUrls()
     logger.debug('movieUrls', movieUrls, movieUrls.length)
@@ -36,7 +37,10 @@ async function scrape3satMovieData () {
         const movieObject = {
           title: movieApiData.title,
           url: movieApiData['http://zdf.de/rels/sharing-url'],
-          img: movieApiData.teaserImageRef.layouts['768x432'],
+          img: await cacheImageAndGenerateCachedLink(
+            movieApiData.teaserImageRef.layouts['768x432'],
+            cachedImageFileHashList
+          ),
           imgAlt: movieApiData.teaserImageRef.altText,
           description: movieApiData.leadParagraph,
           time: {},

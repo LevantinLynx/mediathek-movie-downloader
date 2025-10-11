@@ -6,7 +6,8 @@ const {
   sleep,
   getRandomInteger,
   getRandomUserAgent,
-  getCleanThumbnailUrl
+  getCleanThumbnailUrl,
+  cacheImageAndGenerateCachedLink
 } = require('../helperFunctions.js')
 const { getUpcomingMoviesFromEpg } = require('./epg/arteEPG.js')
 
@@ -18,7 +19,7 @@ const extractor = {
   channel: 'arte'
 }
 
-async function scrapeArteCinemaMovieData () {
+async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
   try {
     let movieList = []
     const apiData = await getAllDataFromPaginatedApi()
@@ -40,7 +41,10 @@ async function scrapeArteCinemaMovieData () {
       const movieObject = {
         title: metadata.title,
         url: metadata.link.url,
-        img: getCleanThumbnailUrl(metadata.images[0].url),
+        img: await cacheImageAndGenerateCachedLink(
+          getCleanThumbnailUrl(metadata.images[0].url),
+          cachedImageFileHashList
+        ),
         description: metadata.description,
         time: {},
         duration: `${Math.ceil(metadata.duration.seconds / 60)} min`,

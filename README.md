@@ -44,6 +44,7 @@ services:
     volumes:
       - '/pfad/zum/downloads/ordner:/usr/src/app/downloads'
       - '/pfad/zum/datenbank/ordner:/usr/src/app/db'
+      - '/pfad/zum/cache/ordner:/usr/src/app/cache'
     ports:
       - '12345:12345'
 ```
@@ -63,6 +64,7 @@ services:
 ## Erledigt
 
 - [x] Support für ARD Sender-Gruppe
+- [x] Bilder Cache für Thumbnails
 
 ---
 

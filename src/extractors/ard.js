@@ -5,7 +5,8 @@ const {
   formatDate
 } = require('date-fns')
 const {
-  getRandomUserAgent
+  getRandomUserAgent,
+  cacheImageAndGenerateCachedLink
 } = require('../helperFunctions.js')
 
 const extractor = {
@@ -14,7 +15,7 @@ const extractor = {
   channel: 'ard'
 }
 
-async function scrapeArdMovieData () {
+async function scrapeArdMovieData (cachedImageFileHashList) {
   try {
     let movieList = []
     let movies = []
@@ -25,7 +26,7 @@ async function scrapeArdMovieData () {
     movies = _.uniqBy(_.flatten(movies), 'id')
 
     for (let i = 0; i < movies.length; i++) {
-      const movie = normalizeMovieData(movies[i])
+      const movie = await normalizeMovieData(movies[i], cachedImageFileHashList)
       movieList.push(movie)
     }
 
@@ -60,7 +61,7 @@ async function scrapeArdMovieData () {
   }
 }
 
-function normalizeMovieData (rawMovieData) {
+async function normalizeMovieData (rawMovieData, cachedImageFileHashList) {
   try {
     const {
       id,
@@ -78,7 +79,10 @@ function normalizeMovieData (rawMovieData) {
     const movie = {
       title: `${shortTitle}`.split(' | ')[0].trim(),
       url: `https://ardmediathek.de/video/${rawMovieData.links?.target?.urlId}`,
-      img: images.aspect16x9?.src?.replace('{width}', 768),
+      img: await cacheImageAndGenerateCachedLink(
+        images.aspect16x9?.src?.replace('{width}', 768),
+        cachedImageFileHashList
+      ),
       imgCover: images.aspect3x4?.src?.replace('{width}', 320),
       description: show?.shortSynopsis,
       time: {

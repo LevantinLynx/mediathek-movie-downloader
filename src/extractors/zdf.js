@@ -8,7 +8,8 @@ const {
 } = require('date-fns')
 const {
   getRandomUserAgent,
-  getIso639Info
+  getIso639Info,
+  cacheImageAndGenerateCachedLink
 } = require('../helperFunctions.js')
 
 const extractor = {
@@ -20,7 +21,7 @@ const extractor = {
   channel: 'zdf'
 }
 
-async function scrapeZdfMovieData () {
+async function scrapeZdfMovieData (cachedImageFileHashList) {
   try {
     let movieList = []
     let movies = []
@@ -36,7 +37,7 @@ async function scrapeZdfMovieData () {
 
     for (let i = 0; i < movieIDs.length; i++) {
       const movieApiData = await getMovieInfoFromApi(movieIDs[i])
-      const movie = normalizeMovieData(movieApiData)
+      const movie = await normalizeMovieData(movieApiData, cachedImageFileHashList)
       if (movie) movieList.push(movie)
     }
 
@@ -101,7 +102,7 @@ async function getHighlightsFromCarousel () {
   }
 }
 
-function normalizeMovieData (rawMovieData) {
+async function normalizeMovieData (rawMovieData, cachedImageFileHashList) {
   try {
     if (!rawMovieData) return null
     const entry = rawMovieData.document ? rawMovieData.document : rawMovieData
@@ -115,7 +116,12 @@ function normalizeMovieData (rawMovieData) {
     const movie = {
       title: entry.titel,
       url: entry.sharingUrl,
-      img: entry.teaserBild?.['768']?.url || entry.teaserBild?.['1']?.url,
+      img: await cacheImageAndGenerateCachedLink(
+        (
+          entry.teaserBild?.['768']?.url ||
+          entry.teaserBild?.['1']?.url
+        ), cachedImageFileHashList
+      ),
       description: entry.beschreibung,
       time: {
         date: movieDate,
