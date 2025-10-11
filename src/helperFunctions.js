@@ -94,7 +94,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
     let fileExtention = getFileExtention(result.headers)
 
     // ARD can't provide a thumbnail size ¯\_(ツ)_/¯
-    // so we just try a few common once ...
+    // so we just try a few common ones ...
     if (url.indexOf('https://api.ardmediathek.de/') === 0) {
       if (fileExtention === null) {
         logger.debug('Trying width 940')
