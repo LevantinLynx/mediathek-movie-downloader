@@ -75,6 +75,9 @@ function getIso639Info (iso639Code1Or2) {
 }
 
 async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
+  // Fallback if image is unavailable
+  if (!url) return '/imgs/movie_image_placeholder.svg'
+
   if ( // Don't cache fsk warning images
     url.indexOf('https://zdf-prod-futura.zdf.de/static/mediathek/fskImages/fsk_16_1280x720.jpg') > -1
   ) return url

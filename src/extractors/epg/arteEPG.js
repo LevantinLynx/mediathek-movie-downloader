@@ -67,19 +67,24 @@ async function getUpcomingMoviesFromEpg () {
 }
 
 function getMoviesFromEpgJSON (epgJSON) {
-  if (epgJSON.tag !== 'Ok') return []
+  if (epgJSON.tag !== 'Ok' || epgJSON?.value?.zones?.length < 1) return []
 
-  const epgMovies = []
-  const zoneData = [
-    ...epgJSON.value.zones[0].content.data,
-    ...epgJSON.value.zones[1].content.data
-  ].filter(entry => entry?.genre?.label === 'Filme')
+  let epgMovies = []
+  let zoneData = []
+  const zones = epgJSON.value.zones
+  logger.debug('[API ARTE] EPG ZONES DATA RAW', zones)
+  for (let i = 0; i < zones.length; i++) {
+    zoneData = [...zoneData, ...(zones[i]?.content?.data || [])]
+  }
+  zoneData.filter(entry => entry?.genre?.label === 'Filme')
 
   for (let i = 0; i < zoneData.length; i++) {
     epgMovies.push(normalizeEpgMovieData(zoneData[i]))
   }
-  logger.debug(_.compact(epgMovies).length)
-  return _.compact(epgMovies)
+
+  epgMovies = _.compact(epgMovies)
+  logger.debug('[API ARTE] EPG (epgMovies)', epgMovies)
+  return epgMovies
 }
 
 function normalizeEpgMovieData (movieData) {

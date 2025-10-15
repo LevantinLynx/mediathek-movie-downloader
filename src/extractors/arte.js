@@ -97,6 +97,8 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
       'apiID'
     )
 
+    movieList = _.compact(movieList)
+
     logger.info(`[ARTE API] Movies found: ${movieList?.length}`)
     return _.orderBy(movieList, ['time.type', 'time.date'], ['desc', 'asc'])
   } catch (err) {
