@@ -322,10 +322,80 @@
         <div class="content" v-show="pageSelected === 'extraInfo'">
           <section id="extraInfo" class="extraInfo">
             <h1>Nützliche Infos &amp; Skripte</h1>
-            <p>
-              ISO-639-2 Dreistellige Länder Codes. <a href="https://de.wikipedia.org/wiki/Liste_der_ISO-639-2-Codes">ISO-639-2 Codes (Wikipedia)</a>
-            </p>
-            <p>https://www.loc.gov/standards/iso639-2/php/code_list.php</p>
+            <article class="script">
+              <header>
+                <h2>Sprach- &amp; Ländercodes</h2>
+              </header>
+              <div class="box">
+                <p>
+                  ISO-639-2 Dreistellige Länder Codes. <a target="_blank" href="https://de.wikipedia.org/wiki/Liste_der_ISO-639-2-Codes">ISO-639-2 Codes (Wikipedia)</a>
+                </p>
+                <p>
+                  <a target="_blank" href="https://www.loc.gov/standards/iso639-2/php/code_list.php">https://www.loc.gov/standards/iso639-2/php/code_list.php</a>
+                </p>
+              </div>
+            </article>
+            <article class="script">
+              <header>
+                <h2>Umbenennen & Reordern von Tonspuren</h2>
+              </header>
+              <div class="box">
+                <p>
+                  Die Originaldatei hat drei Tonspuren: Deutsch, Englisch und Deutsch mit Audiodeskription.<br>
+                  Neue Reihenfolge soll Englisch, Deutsch, Deutsch mit Audiodeskription sein und die Tonspuren ordentlich benannt werden.
+                </p>
+                <p>
+                  <button class="codeSwitch" @click="showCleanCode = !showCleanCode">
+                    <span v-if="!showCleanCode">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13 15H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M8 15L10.5 12.5V12.5C10.7761 12.2239 10.7761 11.7761 10.5 11.5V11.5L8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 8C3 6.11438 3 5.17157 3.58579 4.58579C4.17157 4 5.11438 4 7 4H12H17C18.8856 4 19.8284 4 20.4142 4.58579C21 5.17157 21 6.11438 21 8V12V16C21 17.8856 21 18.8284 20.4142 19.4142C19.8284 20 18.8856 20 17 20H12H7C5.11438 20 4.17157 20 3.58579 19.4142C3 18.8284 3 17.8856 3 16V12V8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                      </svg>
+                      <span>
+                        Befehl
+                      </span>
+                    </span>
+                    <span v-if="showCleanCode">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 9L17 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M7 12L13 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M21 13V7C21 5.11438 21 4.17157 20.4142 3.58579C19.8284 3 18.8856 3 17 3H7C5.11438 3 4.17157 3 3.58579 3.58579C3 4.17157 3 5.11438 3 7V13C3 14.8856 3 15.8284 3.58579 16.4142C4.17157 17 5.11438 17 7 17H9H9.02322C9.31982 17 9.5955 17.1528 9.75269 17.4043L11.864 20.7824C11.9268 20.8829 12.0732 20.8829 12.136 20.7824L14.2945 17.3288C14.4223 17.1242 14.6465 17 14.8877 17H15H17C18.8856 17 19.8284 17 20.4142 16.4142C21 15.8284 21 14.8856 21 13Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                      </svg>
+                      <span>
+                        Erklärung
+                      </span>
+                    </span>
+                  </button>
+                </p>
+                <pre v-show="!showCleanCode">
+<span class="c0"># Alle Nummerierungen beginnen bei 0 als erstem Wert.</span>
+
+ffmpeg \
+  -i '<span class="c1">Film.mkv</span>' \ <span class="c0"># <span class="c1">Input Datei 0.</span> Es können weitere Dateien mit -i Datei_0.ext -i Datei_1.ext etc. angegeben werden.</span>
+  -c:a copy -c:v copy \ <span class="c0"># Audio- &amp; Videospuren sollen Kopiert und nicht transcoded werden. Angabe wird nur ein mal benötigt, unabhängig der Anzahl der Inputs.</span>
+  -map <span class="c1">0</span>:v:<span class="c2">0</span> \ <span class="c0"># Kopiert <span class="c2">Videospur 0</span> aus <span class="c1">Input Datei 0</span></span>
+  -map <span class="c1">0</span>:a:<span class="c3">1</span> \ <span class="c0"># Kopiert <span class="c3">Tonspur 1</span> der <span class="c1">Input Datei 0</span> an Position 0 der <span class="c5">neuen Datei.</span> Die Reihenfolge wird durch die Position des -map im Befehl bestimmt.</span>
+  -map <span class="c1">0</span>:a:<span class="c3">0</span> \ <span class="c0"># Kopiert <span class="c3">Tonspur 0</span> der <span class="c1">Input Datei 0</span> an Position 1 der <span class="c5">neuen Datei.</span></span>
+  -map <span class="c1">0</span>:a:<span class="c3">2</span> \ <span class="c0"># Kopiert <span class="c3">Tonspur 2</span> der <span class="c1">Input Datei 0</span> an Position 2 der <span class="c5">neuen Datei.</span></span>
+  -metadata:s:a:<span class="c5">0</span> language=eng \ <span class="c0"># Setzt die Sprache der <span class="c5">Tonspur 0</span> auf Englisch (Sprach-Codes siehe "ISO 639-2")</span>
+  -metadata:s:a:<span class="c5">0</span> title="Englisch (Originalton)" \ <span class="c0"># Setzt den Text der <span class="c5">Tonspur 0</span> in Programmen angezeigt wird auf "Englisch (Originalton)". Der Text ist frei wählbar.</span>
+  -metadata:s:a:<span class="c5">1</span> language=deu \ <span class="c0"># Setzt die Sprache der <span class="c5">Tonspur 1</span> auf Deutsch</span>
+  -metadata:s:a:<span class="c5">1</span> title="Deutsch" \ <span class="c0"># Setzt den Text der <span class="c5">Tonspur 1</span> in Programmen angezeigt wird auf "Deutsch"</span>
+  -metadata:s:a:<span class="c5">2</span> language=deu \ <span class="c0"># Setzt die Sprache der <span class="c5">Tonspur 2</span> auf Deutsch</span>
+  -metadata:s:a:<span class="c5">2</span> title="Deutsch (Audiotranskription)" \ <span class="c0"># Setzt den Text der 2 Tonspur in Programmen angezeigt wird auf "Deutsch (Audiotranskription)"</span>
+  <span class="c5">"Film.tagged.mkv"</span> <span class="c0"># Ausgabedatei</span>
+</pre>
+                <pre class="cleanScript" v-show="showCleanCode">ffmpeg \
+  -i 'Film.mkv' \
+  -c:a copy -c:v copy \
+  -map 0:v:0 \
+  -map 0:a:1 -metadata:s:a:0 language=eng -metadata:s:a:0 title="Englisch (Originalton)" \
+  -map 0:a:0 -metadata:s:a:1 language=deu -metadata:s:a:1 title="Deutsch" \
+  -map 0:a:2 -metadata:s:a:2 language=deu -metadata:s:a:2 title="Deutsch (Audiotranskription)" \
+  "Film.tagged.mkv"</pre>
+              </div>
+            </article>
           </section>
         </div>
         <div class="content" v-show="pageSelected === 'settings'">
@@ -650,6 +720,8 @@ const app = new Vue({
     progress: {},
 
     nextMetaDataUpdateDate: null,
+
+    showCleanCode: true,
 
     settings: {}
   },

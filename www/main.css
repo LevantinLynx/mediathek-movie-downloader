@@ -317,12 +317,6 @@ h1 small {
   font-size: 1.6rem;
 }
 
-.extraInfo a {
-  display: inline-block;
-  color: var(--blue3);
-  text-decoration: none;
-}
-
 .grp {
   display: grid;
   grid-template-columns: auto 14rem;
@@ -474,6 +468,10 @@ article header h2 {
   padding: 1.4rem var(--boxMargin);
 }
 
+article p:not(:last-child) {
+  margin-bottom: 1em;
+}
+
 article aside {
   display: flex;
 }
@@ -611,10 +609,6 @@ article .failInfo {
 }
 .remove:hover {
   background-color: var(--red);
-}
-
-article p:not(:last-child) {
-  margin-bottom: 1rem;
 }
 
 .thumbnail {
@@ -808,6 +802,60 @@ table tbody tr:nth-child(odd) {
 .loadingText {
   display: flex;
   gap: 1rem;
+}
+
+.extraInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+.extraInfo a {
+  display: inline-block;
+  color: var(--blue3);
+  text-decoration: none;
+}
+button.codeSwitch {
+  padding-left: 3.8rem;
+  position: relative;
+}
+button.codeSwitch svg {
+  position: absolute;
+  top: 50%;
+  left: 2rem;
+  width: 1.1em;
+  height: 1.1em;
+  transform: translate(-50%, -50%);
+}
+
+.script pre.cleanScript {
+  border-color: var(--green);
+}
+
+.script pre {
+  font-family: monospace;
+  padding: 1.4rem;
+  background-color: rgba(0,0,0,95);
+  border: .1rem solid var(--yellow);
+  border-radius: var(--borderRadius);
+  overflow-x: auto;
+}
+.script pre .c0 {
+  color: var(--blue3);
+}
+.script pre .c1 {
+  color: var(--purple);
+}
+.script pre .c2 {
+  color: var(--green);
+}
+.script pre .c3 {
+  color: var(--yellow);
+}
+.script pre .c4 {
+  color: var(--orange);
+}
+.script pre .c5 {
+  color: var(--red);
 }
 
 @media  (width >= 1024px) {
