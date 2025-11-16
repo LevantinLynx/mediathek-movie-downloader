@@ -440,6 +440,54 @@ sleep $(( $(date -f - +%s- <<< "<span class="c2">2025-11-17T14:00</span>"$'\nnow
                 <pre class="cleanScript" v-show="!showCodeComments.sleepCommand">sleep $(( $(date -f - +%s- <<< "2025-11-17T14:00"$'\nnow') 0 )) && yt-dlp https://example.com/test-video</pre>
               </div>
             </article>
+
+            <article class="script">
+              <header>
+                <h2>IPTV Stream aufnehmen</h2>
+              </header>
+              <div class="box">
+                <p>
+                  Livestream eines Senders für Zeit X mitschneiden. Solange es sich um einen ".m3u8" Stream handelt sollten auch andere Webseite funktionieren.<br><br>
+                  Links der Sender findest du bei <a target="_blank" href="https://github.com/jnk22/kodinerds-iptv/blob/master/iptv/clean/clean_tv_main.m3u">Kodi Nerds (Github)</a>
+                </p>
+                <p>
+                  <button class="codeSwitch" @click="showCodeComments.streamRecord = !showCodeComments.streamRecord">
+                    <span v-if="showCodeComments.streamRecord">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13 15H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M8 15L10.5 12.5V12.5C10.7761 12.2239 10.7761 11.7761 10.5 11.5V11.5L8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 8C3 6.11438 3 5.17157 3.58579 4.58579C4.17157 4 5.11438 4 7 4H12H17C18.8856 4 19.8284 4 20.4142 4.58579C21 5.17157 21 6.11438 21 8V12V16C21 17.8856 21 18.8284 20.4142 19.4142C19.8284 20 18.8856 20 17 20H12H7C5.11438 20 4.17157 20 3.58579 19.4142C3 18.8284 3 17.8856 3 16V12V8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                      </svg>
+                      <span>
+                        Befehl
+                      </span>
+                    </span>
+                    <span v-if="!showCodeComments.streamRecord">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 9L17 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M7 12L13 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M21 13V7C21 5.11438 21 4.17157 20.4142 3.58579C19.8284 3 18.8856 3 17 3H7C5.11438 3 4.17157 3 3.58579 3.58579C3 4.17157 3 5.11438 3 7V13C3 14.8856 3 15.8284 3.58579 16.4142C4.17157 17 5.11438 17 7 17H9H9.02322C9.31982 17 9.5955 17.1528 9.75269 17.4043L11.864 20.7824C11.9268 20.8829 12.0732 20.8829 12.136 20.7824L14.2945 17.3288C14.4223 17.1242 14.6465 17 14.8877 17H15H17C18.8856 17 19.8284 17 20.4142 16.4142C21 15.8284 21 14.8856 21 13Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                      </svg>
+                      <span>
+                        Erklärung
+                      </span>
+                    </span>
+                  </button>
+                </p>
+                <pre v-show="showCodeComments.streamRecord">
+<span class="c0"># Yt-dlp nutzt <span class="c1">ffmpeg</span> um <span class="c2">1h 23m 45s</span> des <span class="c3">Livestreams von ZDFneo</span> in der Datei <span class="c5">zdf_neo_aufnahme_1h_23m_45s.mp4</span> aufzunehmen.</span>
+
+yt-dlp \
+  --external-downloader <span class="c1">ffmpeg</span> \
+  --external-downloader-args "ffmpeg:-t <span class="c2">01:23:45</span>" \
+  --referer "https://zdf.de/" \
+  -o <span class="c5">zdf_neo_aufnahme_1h_23m_45s.mp4</span> \
+  <span class="c3">"https://zdf-hls-16.akamaized.net/hls/live/2016499/de/veryhigh/master.m3u8"</span>
+</pre>
+                <pre class="cleanScript" v-show="!showCodeComments.streamRecord">
+yt-dlp --external-downloader ffmpeg --external-downloader-args "ffmpeg:-t 01:23:45" --referer "https://zdf.de/" -o zdf_neo_filme_99.mp4 "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/veryhigh/master.m3u8"</pre>
+              </div>
+            </article>
           </section>
         </div>
         <div class="content" v-show="pageSelected === 'settings'">
@@ -771,7 +819,8 @@ const app = new Vue({
 
     showCodeComments: {
       audioRename: false,
-      sleepCommand: true,
+      sleepCommand: false,
+      streamRecord: false,
     },
 
     settings: {}
