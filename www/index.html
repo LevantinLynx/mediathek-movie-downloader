@@ -321,7 +321,7 @@
         </div>
         <div class="content" v-show="pageSelected === 'extraInfo'">
           <section id="extraInfo" class="extraInfo">
-            <h1>Nützliche Infos &amp; Skripte</h1>
+            <h1 style="margin-bottom:0;">Nützliche Infos &amp; Skripte</h1>
             <article class="script">
               <header>
                 <h2>Sprach- &amp; Ländercodes</h2>
@@ -486,6 +486,64 @@ yt-dlp \
 </pre>
                 <pre class="cleanScript" v-show="!showCodeComments.streamRecord">
 yt-dlp --external-downloader ffmpeg --external-downloader-args "ffmpeg:-t 01:23:45" --referer "https://zdf.de/" -o zdf_neo_filme_99.mp4 "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/veryhigh/master.m3u8"</pre>
+              </div>
+            </article>
+
+            <article class="script">
+              <header>
+                <h2>Serie herunterladen und nummerieren</h2>
+              </header>
+              <div class="box">
+                <p>
+                  Lädt alle Videos der angegeben Webseite herunter und benennt diese automatisch "SXXEXX Titel.ext". XX Steht für eine zweistellige Zahl.<br>
+                  <strong>Tipp:</strong> Bei Angabe von -o "Pfad_eines_nicht_existierenden_Ordners/S01E%(video_autonumber)02d %(title)s.%(ext)s", wird der Ordner "Pfad_eines_nicht_existierenden_Ordners" automatisch angelegt und die Staffel in den Ordner heruntergeladen.<br><br>
+
+                  Info: Mehrsprachige Downloads funktionieren nur, wenn die angegeben Formate auch verfügbar sind. Vorab mit yt-dlp -F URL prüfen!
+                </p>
+                <p>
+                  <button class="codeSwitch" @click="showCodeComments.tvseriesDl = !showCodeComments.tvseriesDl">
+                    <span v-if="showCodeComments.tvseriesDl">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13 15H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M8 15L10.5 12.5V12.5C10.7761 12.2239 10.7761 11.7761 10.5 11.5V11.5L8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 8C3 6.11438 3 5.17157 3.58579 4.58579C4.17157 4 5.11438 4 7 4H12H17C18.8856 4 19.8284 4 20.4142 4.58579C21 5.17157 21 6.11438 21 8V12V16C21 17.8856 21 18.8284 20.4142 19.4142C19.8284 20 18.8856 20 17 20H12H7C5.11438 20 4.17157 20 3.58579 19.4142C3 18.8284 3 17.8856 3 16V12V8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                      </svg>
+                      <span>
+                        Befehl
+                      </span>
+                    </span>
+                    <span v-if="!showCodeComments.tvseriesDl">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 9L17 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M7 12L13 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M21 13V7C21 5.11438 21 4.17157 20.4142 3.58579C19.8284 3 18.8856 3 17 3H7C5.11438 3 4.17157 3 3.58579 3.58579C3 4.17157 3 5.11438 3 7V13C3 14.8856 3 15.8284 3.58579 16.4142C4.17157 17 5.11438 17 7 17H9H9.02322C9.31982 17 9.5955 17.1528 9.75269 17.4043L11.864 20.7824C11.9268 20.8829 12.0732 20.8829 12.136 20.7824L14.2945 17.3288C14.4223 17.1242 14.6465 17 14.8877 17H15H17C18.8856 17 19.8284 17 20.4142 16.4142C21 15.8284 21 14.8856 21 13Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                      </svg>
+                      <span>
+                        Erklärung
+                      </span>
+                    </span>
+                  </button>
+                </p>
+                <pre v-show="showCodeComments.tvseriesDl">
+<span class="c0"># Yt-dlp lädt alle Videos einer <span class="c2">URL/Webseite</span> herunter, und benennt diese automatisch nach angegebenem Muster.</span>
+
+yt-dlp \
+  --limit-rate 2M \ <span class="c0"># Optional: Limitiert den Download auf 2 MB/s.</span>
+  --all-subs \ <span class="c0"># Optional: Lädt alle verfügbaren Untertitel herunter.</span>
+  <span class="c0"># Optional: Mehrere Sprachen herunterladen</span>
+  --audio-multistreams \ <span class="c0"># Muss zwingend gesetzt werden, wenn mehrere Audiospuren heruntergeladen werden.</span>
+  -f "bv+ba[language=<span class="c1">deu</span>]+ba[language=<span class="c1">eng</span>]" \ <span class="c0"># Optional: (bv) Bestes Video only, (ba[language=XYZ]) Beste Audio only in angegeber Sprache "<span class="c1">ISO-639-2 Code</span>"</span>
+  -o "<span class="c3">S01</span><span class="c5">E%(video_autonumber)02d</span> %(title)s.%(ext)s" \ <span class="c0"># <span class="c3">Manuell zu ändernde Season Nummer</span> <span class="c5">Zweistellige Episoden Nummer</span> und Videotitel ohne Ids oder sonstige Info.</span>
+  <span class="c2">https://www.ardmediathek.de/serie/suits/staffel-1/Y3JpZDov...2RlOA/1</span>
+</pre>
+                <pre class="cleanScript" v-show="!showCodeComments.tvseriesDl">
+yt-dlp \
+  --limit-rate 2M \
+  --all-subs \
+  --audio-multistreams -f "bv+ba[language=eng]+ba[language=deu]" \
+  -o "S01E%(video_autonumber)02d %(title)s.%(ext)s" \
+  https://www.ardmediathek.de/serie/suits/staffel-1/Y3JpZDov...2RlOA/1
+</pre>
               </div>
             </article>
           </section>
@@ -821,6 +879,7 @@ const app = new Vue({
       audioRename: false,
       sleepCommand: false,
       streamRecord: false,
+      tvseriesDl: false,
     },
 
     settings: {}
@@ -1018,7 +1077,7 @@ const app = new Vue({
         const movieData = channelData.filter(x => x.apiID === apiID)[0]
         return movieData
       } catch (err) {
-        console.error('Es konnte kein Film mit den angebenen Daten ermittelt werden!')
+        console.error('Es konnte kein Film mit den angegebenen Daten ermittelt werden!')
         return null
       }
     },
