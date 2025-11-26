@@ -2,9 +2,17 @@ function getIsoDate () {
   return new Date().toISOString()
 }
 
+let areDebugLogsEnabled = false
+
+function enableOrDisableDebugLogging (state) {
+  areDebugLogsEnabled = state
+}
+
 module.exports = {
   debug: function () {
-    if (process.env.NODE_ENV !== 'production') console.log(getIsoDate(), 'DEBUG', ...arguments)
+    if (areDebugLogsEnabled || process.env.NODE_ENV !== 'production') {
+      console.log(getIsoDate(), 'DEBUG', ...arguments)
+    }
   },
   log: function () {
     console.log(getIsoDate(), '  LOG', ...arguments)
@@ -17,5 +25,6 @@ module.exports = {
   },
   error: function () {
     console.error(getIsoDate(), 'ERROR', ...arguments)
-  }
+  },
+  enableOrDisableDebugLogging
 }

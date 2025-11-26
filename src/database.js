@@ -281,6 +281,7 @@ async function getAllSettings () {
     includeAudioTranscription: true,
     includeClearLanguage: true,
     includeSubtitles: true,
+    debugLogsEnabled: false,
 
     channelSelection: [
       { name: 'ZDF', active: true },
@@ -316,6 +317,7 @@ async function getAllSettings () {
         settings.channelSelection.push({ name: defaultsChannels[i], active: true })
       }
     }
+    logger.enableOrDisableDebugLogging(settings.debugLogsEnabled || false)
 
     return settings
   }
@@ -334,6 +336,7 @@ async function updateSettings (settings) {
     upsert: true
   })
   events.emit('settingsUpdate')
+  logger.enableOrDisableDebugLogging(settings.debugLogsEnabled || false)
 }
 
 module.exports = {
