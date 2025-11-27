@@ -48,9 +48,15 @@ async function scrapeZdfMovieData (cachedImageFileHashList) {
     logger.debug('movieIDs', movieIDs, movieIDs.length)
 
     for (let i = 0; i < movieIDs.length; i++) {
-      const movieApiData = await getMovieInfoFromApi(movieIDs[i])
-      const movie = await normalizeMovieData(movieApiData, graphqlDataLookupTable[movieIDs[i]], cachedImageFileHashList)
-      if (movie) movieList.push(movie)
+      // Only use entries with a duration (series don't have any duration) and longer than 30 minutes
+      if (
+        graphqlDataLookupTable[movieIDs[i]]?.video?.currentMedia?.nodes?.[0]?.duration &&
+        graphqlDataLookupTable[movieIDs[i]]?.video?.currentMedia?.nodes?.[0]?.duration > 30 * 60
+      ) {
+        const movieApiData = await getMovieInfoFromApi(movieIDs[i])
+        const movie = await normalizeMovieData(movieApiData, graphqlDataLookupTable[movieIDs[i]], cachedImageFileHashList)
+        if (movie) movieList.push(movie)
+      }
     }
 
     movieList = _.orderBy(movieList, ['time.type', 'time.date'], ['desc', 'asc'])
