@@ -29,7 +29,9 @@ async function getAvailableMovieMetaDataFromApis () {
 
     if (
       activeChannels.indexOf('zdf') > -1 ||
-      activeChannels.indexOf('zdfneo') > -1
+      activeChannels.indexOf('zdfneo') > -1 ||
+      activeChannels.indexOf('funk') > -1 ||
+      activeChannels.indexOf('kika') > -1
     ) {
       const zdfApiData = await zdfExtractor.scrapeMovieData(cachedImageFileHashList)
       const zdfApiDataChannels = Object.keys(zdfApiData)
@@ -69,17 +71,32 @@ async function getAvailableMovieMetaDataFromApis () {
       }
     }
 
-    const ardApiData = await ardExtractor.scrapeMovieData(cachedImageFileHashList)
-    const ardApiDataChannels = Object.keys(ardApiData)
-    for (let i = 0; i < ardApiDataChannels.length; i++) {
-      if (
-        activeChannels.indexOf(ardApiDataChannels[i]) > -1 &&
-        ardApiData[ardApiDataChannels[i]]
-      ) {
-        cache[ardApiDataChannels[i]] = {
-          channel: ardApiDataChannels[i],
-          updated: new Date(),
-          movies: ardApiData[ardApiDataChannels[i]]
+    if (
+      activeChannels.indexOf('ard') > -1 ||
+      activeChannels.indexOf('ard_alpha') > -1 ||
+      activeChannels.indexOf('das_erste') > -1 ||
+      activeChannels.indexOf('br') > -1 ||
+      activeChannels.indexOf('hr') > -1 ||
+      activeChannels.indexOf('mdr') > -1 ||
+      activeChannels.indexOf('ndr') > -1 ||
+      activeChannels.indexOf('rbb') > -1 ||
+      activeChannels.indexOf('sr') > -1 ||
+      activeChannels.indexOf('swr') > -1 ||
+      activeChannels.indexOf('wdr') > -1 ||
+      activeChannels.indexOf('one') > -1
+    ) {
+      const ardApiData = await ardExtractor.scrapeMovieData(cachedImageFileHashList)
+      const ardApiDataChannels = Object.keys(ardApiData)
+      for (let i = 0; i < ardApiDataChannels.length; i++) {
+        if (
+          activeChannels.indexOf(ardApiDataChannels[i]) > -1 &&
+          ardApiData[ardApiDataChannels[i]]
+        ) {
+          cache[ardApiDataChannels[i]] = {
+            channel: ardApiDataChannels[i],
+            updated: new Date(),
+            movies: ardApiData[ardApiDataChannels[i]]
+          }
         }
       }
     }
