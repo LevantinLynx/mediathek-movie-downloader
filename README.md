@@ -2,7 +2,7 @@
 
 ## Warum?
 
-Nachdem man in Deutschland sowieso GEZ bezahlt, dachte ich mir, warum nicht auch mal das Angebot nutzen, und eine private Sammlung der verfügbaren Filme in Jellyfin, Plex oder ähnlichem anlegen. Da das ganze manuell doch sehr aufwendig ist, vor allem, wenn mehrere Tonspuren, Untertitel etc. in eine Datei zusammen gefasst und richtig benannt werden sollen, ist automation genau das richtige.
+Nachdem man in Deutschland sowieso Rundfunkbeitrag bezahlt, dachte ich mir, warum nicht auch mal das Angebot nutzen, und eine private Sammlung der verfügbaren Filme in Jellyfin, Plex oder ähnlichem anlegen. Da das ganze manuell doch sehr aufwendig ist, vor allem, wenn mehrere Tonspuren, Untertitel etc. in eine Datei zusammen gefasst und richtig benannt werden sollen, ist automation genau das richtige.
 
 ![Mediathek Movie Downloader WebApp](https://i.imgur.com/oxSfpiK.png)
 
@@ -70,6 +70,8 @@ services:
 ---
 
 ## Dank
+
+Gigant unter Giganten, ich weiß nicht, wo wir heute wären ohne das [ffmpeg Projekt](https://ffmpeg.org/) und all seiner Kontributoren. Ein unglaublich geiles Programm, ohne das weder Youtube, Netflix, Twitch, Jellyfin, Plex oder OBS auskommt. Auch mein bescheidenes Projekt nicht. Wer kann, sollte hier über eine Ünterstützung in Form einer [Spende](https://ffmpeg.org/donations.html) nachdenken.
 
 Einen großen Dank an alle Kontributoren des yt-dlp Projektes, ohne die dieses Projekt nicht möglich wäre. [github.com/yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
 
