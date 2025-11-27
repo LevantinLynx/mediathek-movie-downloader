@@ -30,6 +30,8 @@ async function getAvailableMovieMetaDataFromApis () {
     if (
       activeChannels.indexOf('zdf') > -1 ||
       activeChannels.indexOf('zdfneo') > -1 ||
+      activeChannels.indexOf('zdftivi') > -1 ||
+      activeChannels.indexOf('phoenix') > -1 ||
       activeChannels.indexOf('funk') > -1 ||
       activeChannels.indexOf('kika') > -1
     ) {

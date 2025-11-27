@@ -286,6 +286,8 @@ async function getAllSettings () {
     channelSelection: [
       { name: 'ZDF', active: true },
       { name: 'ZDFneo', active: true },
+      { name: 'ZDFtivi', active: true },
+      { name: 'phoenix', active: true },
       { name: '3sat', active: true },
       { name: 'Arte', active: true },
       { name: 'ARD', active: true },
