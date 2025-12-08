@@ -347,7 +347,7 @@
                 </p>
                 <p>
                   <button class="codeSwitch" @click="showCodeComments.audioRename = !showCodeComments.audioRename">
-                    <span v-if="!showCodeComments.audioRename">
+                    <span v-if="showCodeComments.audioRename">
                       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M13 15H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         <path d="M8 15L10.5 12.5V12.5C10.7761 12.2239 10.7761 11.7761 10.5 11.5V11.5L8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -357,7 +357,7 @@
                         Befehl
                       </span>
                     </span>
-                    <span v-if="showCodeComments.audioRename">
+                    <span v-if="!showCodeComments.audioRename">
                       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M7 9L17 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         <path d="M7 12L13 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
