@@ -34,11 +34,17 @@ async function scrape3satMovieData (cachedImageFileHashList) {
         const movieApiData = await getMovieDataFromApiFromUrl(`${apiConfig.baseUrl}${videoID}.json`, apiConfig.apiKey)
         const mainVideoContent = movieApiData.mainVideoContent?.['http://zdf.de/rels/target']
 
+        const thumbnail = (
+          movieApiData.teaserImageRef.layouts['1280x720'] ||
+          movieApiData.teaserImageRef.layouts['1920x1080'] ||
+          movieApiData.teaserImageRef.layouts['768x432']
+        )
+
         const movieObject = {
           title: movieApiData.title,
           url: movieApiData['http://zdf.de/rels/sharing-url'],
           img: await cacheImageAndGenerateCachedLink(
-            movieApiData.teaserImageRef.layouts['768x432'],
+            thumbnail,
             cachedImageFileHashList
           ),
           imgAlt: movieApiData.teaserImageRef.altText,
