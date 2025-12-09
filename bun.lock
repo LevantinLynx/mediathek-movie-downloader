@@ -7,7 +7,7 @@
       "dependencies": {
         "@seald-io/nedb": "^4.1.2",
         "axios": "^1.13.2",
-        "cron": "^4.3.5",
+        "cron": "^4.4.0",
         "date-fns": "^4.1.0",
         "express": "^5.2.1",
         "fs-extra": "^11.3.2",

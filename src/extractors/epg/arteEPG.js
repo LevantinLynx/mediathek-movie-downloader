@@ -139,8 +139,14 @@ function normalizeEpgMovieData (movieData) {
 
 async function getUpcomingMovieApiIDs () {
   try {
-    const { data: websiteHtml } = await axios.get('https://www.arte.tv/de/p/demnaechst/')
-    const websiteAsElement = new JSDOM(websiteHtml).window.document
+    const dom = new JSDOM(``, {
+      url: "https://www.arte.tv/de/p/demnaechst/",
+      referrer: "https://www.arte.tv/de/p/demnaechst/",
+      contentType: "text/html",
+      includeNodeLocations: true,
+      storageQuota: 5_000_000
+    })
+    const websiteAsElement = dom.window.document
     const scripts = websiteAsElement.querySelectorAll('script')
 
     let scriptContentString = ''
