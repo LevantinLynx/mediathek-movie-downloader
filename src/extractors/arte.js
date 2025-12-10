@@ -24,13 +24,13 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
     let movieList = []
     const apiData = await getAllDataFromPaginatedApi()
     const uniqData = _.uniq(apiData.map(movie => movie.programId))
-    const chunked = _.chunk(uniqData, 5)
+    const chunked = _.chunk(uniqData, 3)
 
     let movieApiData = []
     for (let i = 0; i < chunked.length; i++) {
       const requestResponses = await Promise.all(chunked[i].map(id => getMovieApiDataByID(id)))
       movieApiData.push(requestResponses)
-      await sleep(getRandomInteger(1250, 2875))
+      await sleep(getRandomInteger(1750, 2875))
     }
 
     movieApiData = _.flatten(movieApiData)

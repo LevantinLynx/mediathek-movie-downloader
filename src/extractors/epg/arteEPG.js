@@ -2,7 +2,7 @@ const _ = require('lodash')
 const logger = require('../../logger.js')
 const { default: axios } = require('axios')
 const { addDays, formatDate } = require('date-fns')
-const { JSDOM } = require('jsdom')
+const { parseHTML } = require('linkedom')
 const {
   sleep,
   getRandomUserAgent,
@@ -139,14 +139,9 @@ function normalizeEpgMovieData (movieData) {
 
 async function getUpcomingMovieApiIDs () {
   try {
-    const dom = new JSDOM(``, {
-      url: "https://www.arte.tv/de/p/demnaechst/",
-      referrer: "https://www.arte.tv/de/p/demnaechst/",
-      contentType: "text/html",
-      includeNodeLocations: true,
-      storageQuota: 5_000_000
-    })
-    const websiteAsElement = dom.window.document
+    logger.debug('[ARTE EPG] Getting upcoming movies from DOM.')
+    const { data: websiteHtml } = await axios.get('https://www.arte.tv/de/p/demnaechst/')
+    const { document: websiteAsElement } = parseHTML(websiteHtml)
     const scripts = websiteAsElement.querySelectorAll('script')
 
     let scriptContentString = ''
@@ -160,10 +155,13 @@ async function getUpcomingMovieApiIDs () {
     }
 
     const movieUrls = scriptContentString.match(/\/({fr|de|en|es|it|pl})\/videos\/(\d{6}-\d{3}-[AF])\/[a-zA-Z-]+\//g) || []
-
-    return _.compact(
+    const movieIDs = _.compact(
       movieUrls.map(movie => movie.match(/\/({fr|de|en|es|it|pl})\/videos\/(\d{6}-\d{3}-[AF])/)?.[2])
     )
+    logger.debug('[ARTE EPG] Movie IDs:', movieIDs)
+    logger.debug(`[ARTE EPG] Found "${movieIDs.length} movie IDs."`)
+    logger.debug('[ARTE EPG] DONE! Getting upcoming movies from DOM.')
+    return movieIDs
   } catch (err) {
     logger.error(err)
     return []

@@ -2,7 +2,7 @@ const _ = require('lodash')
 const logger = require('../logger.js')
 const { default: axios } = require('axios')
 const { formatDate } = require('date-fns')
-const { JSDOM } = require('jsdom')
+const { parseHTML } = require('linkedom')
 const {
   getRandomUserAgent,
   cacheImageAndGenerateCachedLink
@@ -130,11 +130,12 @@ async function scrape3satMovieData (cachedImageFileHashList) {
 
 function getMovieUrls (websiteHtml) {
   const movieUrlList = []
-  const websiteAsElement = new JSDOM(websiteHtml).window.document
+  const { document: websiteAsElement } = parseHTML(websiteHtml)
   const jsonElements = websiteAsElement.querySelectorAll('script[type="application/ld+json"]')
 
   for (let i = 0; i < jsonElements.length; i++) {
     if (jsonElements[i].textContent.indexOf('ItemList') > -1) {
+      logger.debug(fixJsonText(jsonElements[i].textContent))
       const data = JSON.parse(fixJsonText(jsonElements[i].textContent))
 
       if (data['@type'] === 'ItemList' && data.itemListElement) {
@@ -148,7 +149,7 @@ function getMovieUrls (websiteHtml) {
 
 function getUpcomingMovieUrls (websiteHtml) {
   const movieUrlList = []
-  const websiteAsElement = new JSDOM(websiteHtml).window.document
+  const { document: websiteAsElement } = parseHTML(websiteHtml)
   const upcomingMovieElements = websiteAsElement.querySelectorAll('div.air-dates a.air-date-link')
 
   if (upcomingMovieElements?.length) {
@@ -181,7 +182,7 @@ async function getMovieDataFromApiFromUrl (movieUrl, apiToken) {
 }
 
 function fixJsonText (text) {
-  return text.replace(/,\s+}/g, '}').replace(/\n/g, '')
+  return text.replace(/,\s+}/g, '}').replace(/\n/g, '').replace(/\s+/g, ' ')
 }
 
 async function getApiConfig () {
@@ -220,7 +221,7 @@ async function getAvailabeMovieUrls () {
     return movieUrls
   } catch (err) {
     logger.error(err)
-    return null
+    return []
   }
 }
 
