@@ -12,6 +12,9 @@ const {
   getIso639Info,
   cacheImageAndGenerateCachedLink
 } = require('../helperFunctions.js')
+const {
+  getAllSettings
+} = require('../database.js')
 
 const extractor = {
   scrapeMovieData: scrapeZdfMovieData,
@@ -33,6 +36,11 @@ async function scrapeZdfMovieData (cachedImageFileHashList) {
   try {
     let movieList = []
 
+    const settings = await getAllSettings()
+    const activeChannels = settings.channelSelection
+      .filter(channel => channel.active)
+      .map(channel => channel.name.toLowerCase().replace(' ', '_'))
+
     const graphqlData = await getMovieDataFromZdfQraphQlApi()
     const graphqlDataLookupTable = {}
 
@@ -53,9 +61,16 @@ async function scrapeZdfMovieData (cachedImageFileHashList) {
         graphqlDataLookupTable[movieIDs[i]]?.video?.currentMedia?.nodes?.[0]?.duration &&
         graphqlDataLookupTable[movieIDs[i]]?.video?.currentMedia?.nodes?.[0]?.duration > 30 * 60
       ) {
-        const movieApiData = await getMovieInfoFromApi(movieIDs[i])
-        const movie = await normalizeMovieData(movieApiData, graphqlDataLookupTable[movieIDs[i]], cachedImageFileHashList)
-        if (movie) movieList.push(movie)
+        const currentChannel = `${graphqlDataLookupTable[movieIDs[i]]?.contentOwner?.metaCollection?.title}`
+          .toLowerCase().replace(' ', '_')
+        if (activeChannels.indexOf(currentChannel) === -1) {
+          // Skip movie if channel is not active
+          logger.debug('[API ZDF] Skipping movie, channel is not marked as active.')
+        } else {
+          const movieApiData = await getMovieInfoFromApi(movieIDs[i])
+          const movie = await normalizeMovieData(movieApiData, graphqlDataLookupTable[movieIDs[i]], cachedImageFileHashList)
+          if (movie) movieList.push(movie)
+        }
       }
     }
 
@@ -194,7 +209,7 @@ async function normalizeMovieData (rawMovieData, rawGrapthQlData, cachedImageFil
     } else if (graphqlInfo.availableTo) {
       movie.preText = `Verfügbar bis ${formatDate(new Date(graphqlInfo.availableTo), 'dd.MM.yyyy')}`
     } else {
-      logger.error('Movie has no preText!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      logger.error('[API ZDF] Movie has no preText!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
     }
 
     if (legacyData.captions) {

@@ -8,6 +8,9 @@ const {
   getRandomUserAgent,
   cacheImageAndGenerateCachedLink
 } = require('../helperFunctions.js')
+const {
+  getAllSettings
+} = require('../database.js')
 
 const extractor = {
   scrapeMovieData: scrapeArdMovieData,
@@ -20,14 +23,19 @@ async function scrapeArdMovieData (cachedImageFileHashList) {
     let movieList = []
     let movies = []
 
+    const settings = await getAllSettings()
+    const activeChannels = settings.channelSelection
+      .filter(channel => channel.active)
+      .map(channel => channel.name.toLowerCase().replace(' ', '_'))
+
     const apiMovies = await getAvailableMoviesFromApi()
     if (apiMovies) movies.push(apiMovies)
 
     movies = _.uniqBy(_.flatten(movies), 'id')
 
     for (let i = 0; i < movies.length; i++) {
-      const movie = await normalizeMovieData(movies[i], cachedImageFileHashList)
-      movieList.push(movie)
+      const movie = await normalizeMovieData(movies[i], cachedImageFileHashList, activeChannels)
+      if (movie) movieList.push(movie)
     }
 
     movieList = _.orderBy(movieList, ['time.date'], ['asc'])
@@ -61,7 +69,7 @@ async function scrapeArdMovieData (cachedImageFileHashList) {
   }
 }
 
-async function normalizeMovieData (rawMovieData, cachedImageFileHashList) {
+async function normalizeMovieData (rawMovieData, cachedImageFileHashList, activeChannels) {
   try {
     const {
       id,
@@ -74,6 +82,14 @@ async function normalizeMovieData (rawMovieData, cachedImageFileHashList) {
       shortTitle,
       show
     } = rawMovieData
+
+    const currentChannel = `${publicationService?.name}`.toLowerCase().replace(' ', '_')
+    if (activeChannels.indexOf(currentChannel) === -1) {
+      // Skip movie if channel is not active
+      logger.debug('[API ARD] Skipping movie, channel is not marked as active.')
+      return null
+    }
+
     const movieDate = new Date(availableTo)
 
     const movie = {
