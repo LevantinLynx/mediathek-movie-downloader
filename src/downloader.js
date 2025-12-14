@@ -229,7 +229,7 @@ async function getParametersForYtdlp (movie) {
         downloadOptions.push(formatOptionString)
       }
     }
-  } else if (['zdf', 'zdfneo', '3sat'].indexOf(movie.channel) > -1) {
+  } else if (['zdf', 'zdfneo', 'zdftivi', 'phoenix', '3sat'].indexOf(movie.channel) > -1) {
     // Get video info
     const info = await ytDlp.getVideoInfo([...downloadOptions, '-f', 'b'])
     if (process.env.NODE_ENV === 'development') {
