@@ -76,17 +76,36 @@ async function downloadMovie (movie) {
 
 async function ytDlpDownloader (movie) {
   let downloadOptions = []
-  let multiVideoDownload = false
 
   downloadOptions = await getParametersForYtdlp(movie)
-  // Detect if return contains multi video download instructions (Object return)
-  if (!Array.isArray(downloadOptions)) multiVideoDownload = true
 
   // Start cron job for progress updates if it's not running
   serverEvents.emit('startDownloadProgressJob')
 
-  if (multiVideoDownload) {
+  // Detect if return contains multi video download instructions (Object return)
+  // This is used for ARD channel group since they are unable to host audio and video separately
+  if (!Array.isArray(downloadOptions)) {
+    const settings = await db.getAllSettings()
     const { multiVideoOptions } = downloadOptions
+
+    // Sadly the ARD does not know how to host subtitles correctly
+    // This is neccessary to avoid download fails due to missing or faulty subtitles
+    if (settings.includeSubtitles) {
+      logger.info(`[YT-DLP] Downloading subtitle files for "${movie.title}" …`)
+      try {
+        const subtitleOnlyOptions = [
+          movie.downloadUrl, // Add url to the movie
+          '-P', movie.baseDownloadPath, // Directory to download to
+          '--all-subs',
+          '--skip-download' // Do not download the video but write all related files
+        ]
+        await ytDlpDownloadProcess(movie, subtitleOnlyOptions)
+      } catch (err) {
+        logger.error('[YT-DPL] Subtitle:', err.message)
+        logger.info(`You might want to run "yt-dlp --all-dubs --no-download ${multiVideoOptions[0][0]}" manually in the cli to try and download subtitles.`)
+      }
+    }
+
     logger.info(`[YT-DLP] Starting multi video download of ${multiVideoOptions.length} files for "${movie.title}" …`)
     for (let i = 0; i < multiVideoOptions.length; i++) {
       await ytDlpDownloadProcess(movie, multiVideoOptions[i], `${i + 1}/${multiVideoOptions.length}`)
@@ -440,7 +459,10 @@ async function getArdGroupParametersForYtdlp (movie) {
     return null
   }
 
-  let defaultAudioVideo = audioLanguages.filter(entry => entry.lang.indexOf('audio-description') === -1)
+  let defaultAudioVideo = audioLanguages.filter(entry =>
+    entry.lang.indexOf('audio-description') === -1 &&
+    entry.lang.indexOf('speech-optimized') === -1
+  )
   if (defaultAudioVideo.length === 0) defaultAudioVideo = audioLanguages
   // Use first language entry thats not a special version as default audio & video
   const videoFile = getVideoForAudioIdentifier(defaultAudioVideo[0].lang, false)
@@ -457,7 +479,6 @@ async function getArdGroupParametersForYtdlp (movie) {
     '-f', `${videoFile.format_id}`,
     '-o', `${videoFile.format_id}_${videoFile.language}.mp4`.replace(' ', '_')
   ]
-  if (settings.includeSubtitles) videoFileOptions.push('--all-subs')
   multiOptions.multiVideoOptions.push(videoFileOptions)
 
   // Audio files
@@ -473,6 +494,24 @@ async function getArdGroupParametersForYtdlp (movie) {
       '-f', `${formatObject.format_id}`,
       '-o', `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_')
     ])
+  }
+
+  // Audio clear language files
+  if (settings.includeClearLanguage) {
+    const audioClearLanguage = audioLanguages.filter(entry => entry.lang.indexOf('speech-optimized') > -1)
+    for (let i = 0; i < audioClearLanguage.length; i++) {
+      const formatObject = getVideoForAudioIdentifier(audioClearLanguage[i].lang, true)
+      multiOptions.files.push({
+        file: `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_'),
+        language: `${formatObject.language.split('-')[0]}`,
+        rawLanguage: `${formatObject.language}`
+      })
+      multiOptions.multiVideoOptions.push([
+        ...downloadOptions,
+        '-f', `${formatObject.format_id}`,
+        '-o', `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_')
+      ])
+    }
   }
 
   // Audio description files
@@ -597,8 +636,7 @@ async function createMultiFilePostProcessingFiles (movie, multiOptions) {
       audioEntry.title = `${isoCodeInfo.german}`
 
       if (audioID.indexOf('audio-description') > -1) audioEntry.title += ' (Audiodeskription)'
-      // @TODO: find out if there is a clear language option in ard videos
-      // else if (rawLang.indexOf('') > -1) audioEntry.title += ' (klare Sprache)'
+      else if (audioID.indexOf('speech-optimized') > -1) audioEntry.title += ' (klare Sprache)'
       else if (audioID === 'ov' || audioID === 'OV') audioEntry.title += ' (Originalton)'
     }
     audioJson.push(audioEntry)
