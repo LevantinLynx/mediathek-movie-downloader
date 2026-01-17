@@ -10,7 +10,9 @@ const downloader = require('./downloader.js')
 const logger = require('./logger.js')
 
 const scheduleCheckJob = CronJob.from({
-  cronTime: `${getRandomInteger(1, 59)} * * * * *`,
+  cronTime: process.env.NODE_ENV === 'development'
+    ? `${getRandomInteger(1, 59)} * * * * *`
+    : `${getRandomInteger(1, 59)} */5 * * * *`,
   onTick: () => downloader.checkForScheduledDownloads(),
   start: false,
   timeZone: 'Europe/Berlin'
