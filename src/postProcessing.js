@@ -45,7 +45,7 @@ async function downloadPostProcessing (movie) {
           file = cleanFileName
         } catch (err) {
           logger.error(`[POSTPROCESSING] Error while trying to rename file "${file}" to "${cleanFileName}"`)
-          logger.error(err)
+          logger.error(err.message || err)
         }
       }
 

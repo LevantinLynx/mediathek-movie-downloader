@@ -130,7 +130,7 @@ function ytDlpDownloadProcess (movie, downloadOptions, countInfo) {
           const data = eventData.split(/of|at|ETA|\(part/).map(part => part.trim())
           db.updateDownloadProgressEntry({
             apiID: movie.apiID,
-            percent: `${parseFloat(data[0])}`.split('.')[0],
+            percent: parseFloat(data[0]).toFixed(1),
             size: data[1],
             speed: data[2],
             eta: data[3],
