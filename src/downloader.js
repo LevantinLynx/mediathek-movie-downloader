@@ -706,8 +706,6 @@ for filename in *.vtt; do
   ffmpeg -i "$filename" "$fname.srt"
 done
 
-find ./*.part* -delete
-
 find ./*.mp4 -delete
 
 find . -size 0 -delete`
