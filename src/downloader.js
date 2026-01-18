@@ -373,7 +373,7 @@ async function getResolutionLimitAsInt () {
 
 async function getFfmpegVideoResolutionOption () {
   const settings = await db.getAllSettings()
-  logger.debug('getFfmpegVideoResolutionOption', settings)
+  logger.debug('[DOWNLOADER] getFfmpegVideoResolutionOption', settings)
   const downloadResolutionLimit = settings.downloadResolutionLimit || 'none'
   switch (downloadResolutionLimit) {
     case 'none': return 'best*[height<=9999]'
@@ -455,7 +455,7 @@ async function getArdGroupParametersForYtdlp (movie) {
       ) return rawVideoFormats[i]
     }
 
-    logger.debug('No format matching was found!', [...info.formats])
+    logger.debug(`[DOWNLOADER] No format matching "${lang}" was found!`, [...info.formats])
     return null
   }
 
@@ -464,8 +464,24 @@ async function getArdGroupParametersForYtdlp (movie) {
     entry.lang.indexOf('speech-optimized') === -1
   )
   if (defaultAudioVideo.length === 0) defaultAudioVideo = audioLanguages
-  // Use first language entry thats not a special version as default audio & video
-  const videoFile = getVideoForAudioIdentifier(defaultAudioVideo[0].lang, false)
+  logger.debug('[DOWNLOADER] defaultAudioVideo', defaultAudioVideo)
+
+  // check if prefered audio language is set and available
+  // if possible use the prefered language video file
+  let videoFile = null
+  if (settings?.preferedDownloadLanguage) {
+    const { iso_639_1: iso639v1, iso_639_2: iso639v2 } = getIso639Info(settings.preferedDownloadLanguage)
+    const preferedAudioArray = [iso639v1, iso639v2]
+    const preferedAudio = defaultAudioVideo.filter(a => preferedAudioArray.indexOf(a.lang) > -1)
+    if (preferedAudio.length > 0) {
+      videoFile = getVideoForAudioIdentifier(preferedAudio[0].lang, false)
+    }
+  }
+
+  if (videoFile === null) {
+    // Use first language entry thats not a special version as default audio & video
+    videoFile = getVideoForAudioIdentifier(defaultAudioVideo[0].lang, false)
+  }
 
   // Add video file to options and info
   multiOptions.files.push({
@@ -481,9 +497,18 @@ async function getArdGroupParametersForYtdlp (movie) {
   ]
   multiOptions.multiVideoOptions.push(videoFileOptions)
 
+  // Generate audio lists for remaining languages and extras
+  const remainingAudio = audioLanguages
+    .filter(entry =>
+      entry.lang.indexOf('audio-description') === -1 &&
+      entry.lang.indexOf('speech-optimized') === -1 &&
+      entry.lang !== videoFile.language
+    )
+  logger.debug('[DOWNLOADER] remainingAudio', remainingAudio)
+
   // Audio files
-  for (let i = 1; i < defaultAudioVideo.length; i++) {
-    const formatObject = getVideoForAudioIdentifier(defaultAudioVideo[i].lang, true)
+  for (let i = 0; i < remainingAudio.length; i++) {
+    const formatObject = getVideoForAudioIdentifier(remainingAudio[i].lang, true)
     multiOptions.files.push({
       file: `${formatObject.format_id}_${formatObject.language}.mp4`.replace(' ', '_'),
       language: `${formatObject.language.split('-')[0]}`,
@@ -498,7 +523,12 @@ async function getArdGroupParametersForYtdlp (movie) {
 
   // Audio clear language files
   if (settings.includeClearLanguage) {
-    const audioClearLanguage = audioLanguages.filter(entry => entry.lang.indexOf('speech-optimized') > -1)
+    const audioClearLanguage = audioLanguages
+      .filter(entry =>
+        entry.lang.indexOf('speech-optimized') > -1 &&
+        entry.lang !== videoFile.language
+      )
+    logger.debug('[DOWNLOADER] audioClearLanguage', audioClearLanguage)
     for (let i = 0; i < audioClearLanguage.length; i++) {
       const formatObject = getVideoForAudioIdentifier(audioClearLanguage[i].lang, true)
       multiOptions.files.push({
@@ -516,7 +546,12 @@ async function getArdGroupParametersForYtdlp (movie) {
 
   // Audio description files
   if (settings.includeAudioTranscription) {
-    const audioTranscriptions = audioLanguages.filter(entry => entry.lang.indexOf('audio-description') > -1)
+    const audioTranscriptions = audioLanguages
+      .filter(entry =>
+        entry.lang.indexOf('audio-description') > -1 &&
+        entry.lang !== videoFile.language
+      )
+    logger.debug('[DOWNLOADER] audioTranscriptions', audioTranscriptions)
     for (let i = 0; i < audioTranscriptions.length; i++) {
       const formatObject = getVideoForAudioIdentifier(audioTranscriptions[i].lang, true)
       multiOptions.files.push({
@@ -531,7 +566,7 @@ async function getArdGroupParametersForYtdlp (movie) {
       ])
     }
   }
-  logger.debug('multiOptions', multiOptions)
+  logger.debug('[DOWNLOADER] multiOptions', multiOptions)
 
   await createMultiFilePostProcessingFiles(movie, multiOptions)
 
@@ -543,9 +578,9 @@ async function createAudioAndPostProcessingFiles (movie, audioList) {
 
   for (let i = 0; i < audioList.length; i++) {
     const { id: audioID, lang: isoLangCode } = audioList[i]
-    logger.debug(audioID, isoLangCode)
+    logger.debug('[DOWNLOADER] Audio file & post processing:', audioID, isoLangCode)
     const isoCodeInfo = getIso639Info(isoLangCode)
-    logger.debug(isoCodeInfo, typeof isoLangCode, isoLangCode)
+    logger.debug('[DOWNLOADER] Audio file & post processing:', isoCodeInfo, typeof isoLangCode, isoLangCode)
 
     const audioEntry = {
       iso_639_1: isoLangCode,
@@ -621,9 +656,9 @@ async function createMultiFilePostProcessingFiles (movie, multiOptions) {
 
   for (let i = 0; i < files.length; i++) {
     const { file, language: isoLangCode, rawLanguage: audioID } = files[i]
-    logger.debug(file, isoLangCode)
+    logger.debug('[DOWNLOADER] Multifile processing:', file, isoLangCode)
     const isoCodeInfo = getIso639Info(`${isoLangCode}`.length === 3 ? isoLangCode : 'und')
-    logger.debug(isoCodeInfo, typeof isoLangCode, isoLangCode)
+    logger.debug('[DOWNLOADER] Multifile processing:', isoCodeInfo, typeof isoLangCode, isoLangCode)
 
     const audioEntry = {
       iso_639_1: isoLangCode,
@@ -658,7 +693,7 @@ async function createMultiFilePostProcessingFiles (movie, multiOptions) {
   }
   ffmpegCommandString += `${mapString} "${movie.title}.mkv"`
 
-  logger.debug('ffmpegCommandString', ffmpegCommandString)
+  logger.debug('[DOWNLOADER] ffmpegCommandString', ffmpegCommandString)
 
   const ffmpegAudioTitleString = `#!/bin/sh
 cd "${movie.baseDownloadPath}"
@@ -670,6 +705,8 @@ for filename in *.vtt; do
   fname="\${filename%.*}"
   ffmpeg -i "$filename" "$fname.srt"
 done
+
+find ./*.part* -delete
 
 find ./*.mp4 -delete
 
