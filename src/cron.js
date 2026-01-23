@@ -1,8 +1,7 @@
 const path = require('path')
 const YTDlpWrap = require('yt-dlp-wrap').default
 const {
-  getRandomInteger,
-  shuffleArray
+  getRandomInteger
 } = require('./helperFunctions.js')
 const { getAvailableMovieMetaDataFromApis } = require('./extractors/main.js')
 const { CronJob, CronTime } = require('cron')
@@ -56,7 +55,7 @@ CronJob.from({
 })
 
 function getRandomMetaDataRefreshCronTime () {
-  return `${getRandomInteger(0, 59)} ${getRandomInteger(0, 54)} ${shuffleArray([2, 3, 4]).pop()} * * *`
+  return `${getRandomInteger(0, 59)} ${getRandomInteger(0, 54)} ${getRandomInteger(2, 4)} * * *`
 }
 
 serverEvents.on('forceMetaDataUpdate', () => startMetaDataRefreshJob(true))

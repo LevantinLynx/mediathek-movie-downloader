@@ -20,15 +20,6 @@ function getRandomInteger (min, max) {
   return Math.round(Math.random() * (max - min) + min)
 }
 
-function shuffleArray (inputArray) {
-  const array = [...inputArray]
-  for (let i = array.length - 1; i >= 1; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]]
-  }
-  return array
-}
-
 function sleep (timeInMs = 2500) {
   return new Promise(resolve => setTimeout(() => resolve(), timeInMs))
 }
@@ -92,7 +83,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
   }
 
   try {
-    logger.info('Caching image', url)
+    logger.debug('Caching image', url)
     let result = await axios.get(url, { responseType: 'arraybuffer' })
     let fileExtention = getFileExtention(result.headers)
 
@@ -139,7 +130,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
     const fileData = Buffer.from(result.data, 'binary')
     await Bun.write(path.join(cacheDir, `${fileNameHash}.${fileExtention}`), fileData)
 
-    logger.info('DONE Caching', url)
+    logger.debug('DONE Caching', url)
     await sleep(getRandomInteger(275, 555)) // avoid rate limiting while downloading images
     return path.join('cache', `${fileNameHash}.${fileExtention}`)
   } catch (err) {
@@ -189,7 +180,6 @@ module.exports = {
   getCleanThumbnailUrl,
   getRandomUserAgent,
   getRandomInteger,
-  shuffleArray,
   sleep,
   getIso639Info,
   cacheImageAndGenerateCachedLink
