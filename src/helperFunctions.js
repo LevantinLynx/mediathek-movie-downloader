@@ -82,7 +82,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
     url.indexOf('https://zdf-prod-futura.zdf.de/static/mediathek/fskImages/fsk_16_1280x720.jpg') > -1
   ) return url
 
-  const cleanUrlForHashing = url.split('?')[0]
+  const cleanUrlForHashing = url.split('?')[0].split('#')[0]
 
   const fileNameHash = new Bun.CryptoHasher('md5').update(cleanUrlForHashing).digest('hex')
 
@@ -140,7 +140,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
     await Bun.write(path.join(cacheDir, `${fileNameHash}.${fileExtention}`), fileData)
 
     logger.info('DONE Caching', url)
-    await new Promise(resolve => setTimeout(() => resolve(), getRandomInteger(150, 350)))
+    await sleep(getRandomInteger(275, 555)) // avoid rate limiting while downloading images
     return path.join('cache', `${fileNameHash}.${fileExtention}`)
   } catch (err) {
     logger.error(err)

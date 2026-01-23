@@ -12,6 +12,7 @@ const cacheDir = path.join(__dirname, '..', '..', 'cache')
 fs.ensureDirSync(cacheDir)
 
 async function getAvailableMovieMetaDataFromApis () {
+  const startTimestamp = Date.now()
   try {
     const settings = await getAllSettings()
     const activeChannels = settings.channelSelection
@@ -27,83 +28,100 @@ async function getAvailableMovieMetaDataFromApis () {
       cachedImageFileHashList[cachedImageFiles[i].split('.')[0]] = cachedImageFiles[i]
     }
 
-    if (
-      activeChannels.indexOf('zdf') > -1 ||
-      activeChannels.indexOf('zdfneo') > -1 ||
-      activeChannels.indexOf('zdftivi') > -1 ||
-      activeChannels.indexOf('phoenix') > -1 ||
-      activeChannels.indexOf('funk') > -1 ||
-      activeChannels.indexOf('kika') > -1
-    ) {
-      const zdfApiData = await zdfExtractor.scrapeMovieData(cachedImageFileHashList)
-      const zdfApiDataChannels = Object.keys(zdfApiData)
-      for (let i = 0; i < zdfApiDataChannels.length; i++) {
-        if (
-          activeChannels.indexOf(zdfApiDataChannels[i]) > -1 &&
-          zdfApiData[zdfApiDataChannels[i]]
-        ) {
-          cache[zdfApiDataChannels[i]] = {
-            channel: zdfApiDataChannels[i],
-            updated: new Date(),
-            movies: zdfApiData[zdfApiDataChannels[i]]
+    async function getZdfMovies (cache) {
+      if (
+        activeChannels.indexOf('zdf') > -1 ||
+        activeChannels.indexOf('zdfneo') > -1 ||
+        activeChannels.indexOf('zdftivi') > -1 ||
+        activeChannels.indexOf('phoenix') > -1 ||
+        activeChannels.indexOf('funk') > -1 ||
+        activeChannels.indexOf('kika') > -1
+      ) {
+        const zdfApiData = await zdfExtractor.scrapeMovieData(cachedImageFileHashList)
+        const zdfApiDataChannels = Object.keys(zdfApiData)
+        for (let i = 0; i < zdfApiDataChannels.length; i++) {
+          if (
+            activeChannels.indexOf(zdfApiDataChannels[i]) > -1 &&
+            zdfApiData[zdfApiDataChannels[i]]
+          ) {
+            cache[zdfApiDataChannels[i]] = {
+              channel: zdfApiDataChannels[i],
+              updated: new Date(),
+              movies: zdfApiData[zdfApiDataChannels[i]]
+            }
           }
         }
       }
     }
 
-    if (activeChannels.indexOf('3sat') > -1) {
-      const sat3Data = await dreisatExtractor.scrapeMovieData(cachedImageFileHashList)
-      if (sat3Data?.length > 0) {
-        cache['3sat'] = {
-          channel: '3sat',
-          updated: new Date(),
-          movies: sat3Data
-        }
-      }
-    }
-
-    if (activeChannels.indexOf('arte') > -1) {
-      const arteData = await arteExtractor.scrapeMovieData(cachedImageFileHashList)
-      if (arteData) {
-        cache.arte = {
-          channel: 'arte',
-          updated: new Date(),
-          movies: arteData
-        }
-      }
-    }
-
-    if (
-      activeChannels.indexOf('ard') > -1 ||
-      activeChannels.indexOf('ard_alpha') > -1 ||
-      activeChannels.indexOf('das_erste') > -1 ||
-      activeChannels.indexOf('br') > -1 ||
-      activeChannels.indexOf('hr') > -1 ||
-      activeChannels.indexOf('mdr') > -1 ||
-      activeChannels.indexOf('ndr') > -1 ||
-      activeChannels.indexOf('rbb') > -1 ||
-      activeChannels.indexOf('sr') > -1 ||
-      activeChannels.indexOf('swr') > -1 ||
-      activeChannels.indexOf('wdr') > -1 ||
-      activeChannels.indexOf('one') > -1
-    ) {
-      const ardApiData = await ardExtractor.scrapeMovieData(cachedImageFileHashList)
-      const ardApiDataChannels = Object.keys(ardApiData)
-      for (let i = 0; i < ardApiDataChannels.length; i++) {
-        if (
-          activeChannels.indexOf(ardApiDataChannels[i]) > -1 &&
-          ardApiData[ardApiDataChannels[i]]
-        ) {
-          cache[ardApiDataChannels[i]] = {
-            channel: ardApiDataChannels[i],
+    async function get3satMovies (cache) {
+      if (activeChannels.indexOf('3sat') > -1) {
+        const sat3Data = await dreisatExtractor.scrapeMovieData(cachedImageFileHashList)
+        if (sat3Data?.length > 0) {
+          cache['3sat'] = {
+            channel: '3sat',
             updated: new Date(),
-            movies: ardApiData[ardApiDataChannels[i]]
+            movies: sat3Data
           }
         }
       }
     }
+
+    async function getArteMovies (cache) {
+      if (activeChannels.indexOf('arte') > -1) {
+        const arteData = await arteExtractor.scrapeMovieData(cachedImageFileHashList)
+        if (arteData) {
+          cache.arte = {
+            channel: 'arte',
+            updated: new Date(),
+            movies: arteData
+          }
+        }
+      }
+    }
+
+    async function getArdMovies (cache) {
+      if (
+        activeChannels.indexOf('ard') > -1 ||
+        activeChannels.indexOf('ard_alpha') > -1 ||
+        activeChannels.indexOf('das_erste') > -1 ||
+        activeChannels.indexOf('br') > -1 ||
+        activeChannels.indexOf('hr') > -1 ||
+        activeChannels.indexOf('mdr') > -1 ||
+        activeChannels.indexOf('ndr') > -1 ||
+        activeChannels.indexOf('rbb') > -1 ||
+        activeChannels.indexOf('sr') > -1 ||
+        activeChannels.indexOf('swr') > -1 ||
+        activeChannels.indexOf('wdr') > -1 ||
+        activeChannels.indexOf('one') > -1
+      ) {
+        const ardApiData = await ardExtractor.scrapeMovieData(cachedImageFileHashList)
+        const ardApiDataChannels = Object.keys(ardApiData)
+        for (let i = 0; i < ardApiDataChannels.length; i++) {
+          if (
+            activeChannels.indexOf(ardApiDataChannels[i]) > -1 &&
+            ardApiData[ardApiDataChannels[i]]
+          ) {
+            cache[ardApiDataChannels[i]] = {
+              channel: ardApiDataChannels[i],
+              updated: new Date(),
+              movies: ardApiData[ardApiDataChannels[i]]
+            }
+          }
+        }
+      }
+    }
+
+    // Load data from all channels in parallel
+    await Promise.all([
+      getZdfMovies(cache),
+      get3satMovies(cache),
+      getArteMovies(cache),
+      getArdMovies(cache)
+    ])
 
     const cacheValuesObject = Object.values(cache)
+    logger.debug('[META DATA] cacheValuesObject:', cacheValuesObject)
 
     // Remove unused images from cache
     const currentImageLinks = _.flatten(cacheValuesObject.map(channel => channel.movies.map(movie => movie.img)))
@@ -115,6 +133,10 @@ async function getAvailableMovieMetaDataFromApis () {
         await Bun.file(path.join(cacheDir, cachedImageFileNames[i])).delete()
       }
     }
+
+    const doneTimestamp = Date.now()
+
+    logger.debug(`[META DATA] Data retrieval took ${doneTimestamp - startTimestamp} ms`)
 
     return cacheValuesObject
   } catch (err) {
