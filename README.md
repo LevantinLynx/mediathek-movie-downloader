@@ -55,17 +55,21 @@ services:
 ## Roadmap
 
 - [ ] Downloads manuell per Link hinzufügen, Serien, Doku etc.
-- [ ] Nützliche Scripte für ffmpeg (Zusammenfügen von Video Dateien, Umbenennen von Tonspuren …)
 - [ ] Movie Ratings (imdb, tmdb oder Ähnliches…)
 - [ ] Einstellungen je Download
   - [ ] Auflösung
   - [ ] Bandbreite
   - [ ] Sprachen
 
+## In Bearbeitung
+- [ ] Option für zweite Videospur mit Deutscher Gebärden Sprache (DGS)
+- [ ] Nützliche Scripte für ffmpeg (Zusammenfügen von Video Dateien, Umbenennen von Tonspuren …)
+
 ## Erledigt
 
 - [x] Support für ARD Sender-Gruppe
 - [x] Bilder Cache für Thumbnails
+- [x] Automatische updates der yt-dlp Binary
 
 ---
 

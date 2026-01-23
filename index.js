@@ -1,4 +1,3 @@
-const YTDlpWrap = require('yt-dlp-wrap').default
 const { version } = require('./package.json')
 const logger = require('./src/logger.js')
 const db = require('./src/database.js')
@@ -6,7 +5,7 @@ const fs = require('fs-extra')
 const path = require('path')
 const { server, io, serverEvents } = require('./src/server.js')
 const cron = require('./src/cron.js')
-// const downloader = require('./src/downloader.js')
+
 const {
   scheduleDownloadByIdAndChannel
 } = require('./src/scheduler.js')
@@ -53,13 +52,7 @@ async function initializeServer () {
   // Ensure yt-dlp directory exists
   fs.ensureDirSync(path.join(__dirname, 'src', 'bin'))
 
-  logger.info('[SERVER] Downloading yt-dlp...')
-  // ensure yt-dlp is downloaded
-  await YTDlpWrap.downloadFromGithub(path.join(__dirname, 'src', 'bin', 'yt-dlp'))
-
-  const ytDlp = new YTDlpWrap(path.join(__dirname, 'src', 'bin', 'yt-dlp'))
-
-  logger.info('[YT-DLP] Version:', `${await ytDlp.getVersion()}`.trim())
+  await cron.checkAndUpdateYtDlp()
 
   await db.initialize()
 
