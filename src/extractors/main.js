@@ -120,7 +120,10 @@ async function getAvailableMovieMetaDataFromApis () {
       getArdMovies(cache)
     ])
 
-    const cacheValuesObject = Object.values(cache)
+    // Ensure channels are always in the same order
+    const sortedCache = _.pick(cache, Object.keys(cache).sort())
+
+    const cacheValuesObject = Object.values(sortedCache)
     logger.debug('[META DATA] cacheValuesObject:', cacheValuesObject)
 
     // Remove unused images from cache
