@@ -49,8 +49,6 @@ async function initializeServer () {
   logger.info('[SERVER] Ensure all required dirs are created...')
   // Ensure downloads directory exists
   fs.ensureDirSync(path.join(__dirname, 'downloads'))
-  // Ensure yt-dlp directory exists
-  fs.ensureDirSync(path.join(__dirname, 'src', 'bin'))
 
   await cron.checkAndUpdateYtDlp()
 

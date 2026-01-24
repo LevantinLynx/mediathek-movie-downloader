@@ -1,4 +1,5 @@
 const path = require('path')
+const fs = require('fs-extra')
 const YTDlpWrap = require('yt-dlp-wrap').default
 const {
   getRandomInteger
@@ -91,6 +92,10 @@ async function startMetaDataRefreshJob (isForced) {
 
 async function checkAndUpdateYtDlp () {
   try {
+    // Ensure yt-dlp directory exists
+    fs.ensureDirSync(path.join(__dirname, 'src', 'bin'))
+
+    // Update check
     const ytDlpPath = path.join(__dirname, 'bin', 'yt-dlp')
     if (await Bun.file(ytDlpPath).exists()) {
       logger.info('[YT-DLP] Checking for update …')
