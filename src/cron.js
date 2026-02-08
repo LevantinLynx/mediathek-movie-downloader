@@ -93,7 +93,7 @@ async function startMetaDataRefreshJob (isForced) {
 async function checkAndUpdateYtDlp () {
   try {
     // Ensure yt-dlp directory exists
-    fs.ensureDirSync(path.join(__dirname, 'src', 'bin'))
+    fs.ensureDirSync(path.join(__dirname, 'bin'))
 
     // Update check
     const ytDlpPath = path.join(__dirname, 'bin', 'yt-dlp')
