@@ -313,6 +313,13 @@ h1 small {
 #info a:not(:last-child) {
   margin-bottom: .2rem;
 }
+#info ul {
+  list-style: square;
+  margin-left: 1.7rem;
+}
+#info ul li:not(:first-child) {
+  margin-top: .6rem;
+}
 .content {
   display: flex;
   flex-direction: column;

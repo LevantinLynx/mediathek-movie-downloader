@@ -39,6 +39,7 @@ function getCleanThumbnailUrl (thumbnailUrl) {
 function sanitizeFileAndDirNames (input) {
   if (typeof input !== 'string') throw new Error('Input must be string')
 
+  const unwantedTitleCharacters = /[«»：]/g // eslint-disable-line no-useless-escape
   const illegalRe = /[\/\?<>\\:\*\|"]/g // eslint-disable-line no-useless-escape
   const controlRe = /[\x00-\x1f\x80-\x9f]/g // eslint-disable-line no-control-regex
   const reservedRe = /^\.+$/
@@ -46,6 +47,7 @@ function sanitizeFileAndDirNames (input) {
   const windowsTrailingRe = /[\. ]+$/ // eslint-disable-line no-useless-escape
 
   const sanitized = input
+    .replace(unwantedTitleCharacters, '')
     .replace(illegalRe, '')
     .replace(controlRe, '')
     .replace(reservedRe, '')
