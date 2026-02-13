@@ -12,22 +12,18 @@ const downloader = require('./downloader.js')
 const logger = require('./logger.js')
 
 const scheduleCheckJob = CronJob.from({
-  cronTime: process.env.NODE_ENV === 'development'
-    ? `${getRandomInteger(1, 59)} * * * * *`
-    : `${getRandomInteger(1, 59)} */5 * * * *`,
+  cronTime: `${getRandomInteger(1, 59)} */5 * * * *`,
   onTick: () => downloader.checkForScheduledDownloads(),
   start: false,
   timeZone: 'Europe/Berlin'
 })
 
 const metaDataUpdateJob = CronJob.from({
-  cronTime: '0 0 0 * * *',
+  cronTime: getRandomMetaDataRefreshCronTime(),
   onTick: async () => startMetaDataRefreshJob(),
   start: false,
   timeZone: 'Europe/Berlin'
 })
-metaDataUpdateJob.setTime(new CronTime(getRandomMetaDataRefreshCronTime()))
-metaDataUpdateJob.start()
 
 const downloadProgressJob = CronJob.from({
   cronTime: '* * * * * *',
@@ -36,14 +32,14 @@ const downloadProgressJob = CronJob.from({
   timeZone: 'Europe/Berlin'
 })
 
-CronJob.from({
+const ytDlpUpdateCronJob = CronJob.from({
   cronTime: `${getRandomInteger(1, 59)} ${getRandomInteger(1, 59)} ${getRandomInteger(8, 9)} * * *`,
   onTick: () => checkAndUpdateYtDlp(),
-  start: true,
+  start: false,
   timeZone: 'Europe/Berlin'
 })
 
-CronJob.from({
+const metaDataScheduleUpdateCronJob = CronJob.from({
   cronTime: '0 55 5 * * *',
   onTick: () => {
     const time = new CronTime(getRandomMetaDataRefreshCronTime())
@@ -51,7 +47,7 @@ CronJob.from({
     io.emit('nextMetaDataUpdateDate', metaDataUpdateJob.nextDate())
     logger.info('[CRON] Meta data will be updated @', new Date(metaDataUpdateJob.nextDate()).toLocaleString('de-DE'))
   },
-  start: true,
+  start: false,
   timeZone: 'Europe/Berlin'
 })
 
@@ -90,10 +86,16 @@ async function startMetaDataRefreshJob (isForced) {
   logger.info('[META DATA] DONE Refreshing available movie data …')
 }
 
+let updateJobRunning = false
 async function checkAndUpdateYtDlp () {
+  if (updateJobRunning) {
+    logger.info('[YT-DLP] Update already in progress!')
+    return
+  }
+  updateJobRunning = true
   try {
     // Ensure yt-dlp directory exists
-    fs.ensureDirSync(path.join(__dirname, 'src', 'bin'))
+    fs.ensureDirSync(path.join(__dirname, 'bin'))
 
     // Update check
     const ytDlpPath = path.join(__dirname, 'bin', 'yt-dlp')
@@ -125,6 +127,8 @@ async function checkAndUpdateYtDlp () {
   } catch (err) {
     logger.error('[YT-DLP] Update checker ERROR:', err.message)
     logger.error(err)
+  } finally {
+    updateJobRunning = false
   }
 }
 
@@ -132,6 +136,9 @@ module.exports = {
   scheduleCheckJob,
   metaDataUpdateJob,
   downloadProgressJob,
+
+  ytDlpUpdateCronJob,
+  metaDataScheduleUpdateCronJob,
 
   checkAndUpdateYtDlp
 }

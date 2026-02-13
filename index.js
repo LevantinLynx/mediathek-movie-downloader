@@ -60,10 +60,19 @@ async function initializeServer () {
   })
 
   // Start cron jobs
-  cron.scheduleCheckJob.start()
-  logger.info('[CRON] Schedule checker will run @', cron.scheduleCheckJob.cronTime.source)
-  cron.metaDataUpdateJob.start()
-  logger.info('[CRON] Meta data will be updated @', new Date(cron.metaDataUpdateJob.nextDate()).toLocaleString('de-DE'))
+  if (process.env.NODE_ENV === 'production') {
+    cron.scheduleCheckJob.start()
+    logger.info('[CRON] Schedule checker will run @', cron.scheduleCheckJob.cronTime.source)
+
+    cron.metaDataUpdateJob.start()
+    cron.metaDataScheduleUpdateCronJob.start()
+    logger.info('[CRON] Meta data will be updated @', new Date(cron.metaDataUpdateJob.nextDate()).toLocaleString('de-DE'))
+
+    cron.ytDlpUpdateCronJob.start()
+    logger.info('[CRON] yt-dlp updater will check for updates @', new Date(cron.ytDlpUpdateCronJob.nextDate()).toLocaleString('de-DE'))
+  } else {
+    logger.debug('[CRON] Development mode detected. No cron jobs will be scheduled!')
+  }
 }
 
 // DB event listeners
