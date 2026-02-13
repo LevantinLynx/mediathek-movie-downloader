@@ -55,8 +55,6 @@ function getRandomMetaDataRefreshCronTime () {
   return `${getRandomInteger(0, 59)} ${getRandomInteger(0, 54)} ${getRandomInteger(2, 4)} * * *`
 }
 
-serverEvents.on('forceMetaDataUpdate', () => startMetaDataRefreshJob(true))
-
 let metaDataJobRunning = false
 async function startMetaDataRefreshJob (isForced) {
   if (metaDataJobRunning) return logger.info('[SKIP] Meta data refresh job is currently running!')
@@ -131,6 +129,11 @@ async function checkAndUpdateYtDlp () {
     updateJobRunning = false
   }
 }
+
+// Server event listeners
+serverEvents.on('runYtdlpUpdateCheck', () => checkAndUpdateYtDlp())
+serverEvents.on('forceMetaDataUpdate', () => startMetaDataRefreshJob(true))
+serverEvents.on('runDownloadCheck', () => downloader.checkForScheduledDownloads())
 
 module.exports = {
   scheduleCheckJob,

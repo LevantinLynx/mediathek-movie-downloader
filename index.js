@@ -12,14 +12,26 @@ const {
 const { sleep } = require('./src/helperFunctions.js')
 
 io.on('connection', async socket => {
-  socket.emit('version', version)
-  socket.emit('settingsUpdate', await db.getAllSettings())
-  socket.emit('scheduleUpdate', await db.getScheduleData())
-  socket.emit('finishedMoviesUpdate', await db.getFinishedMovies())
-  socket.emit('ignoreListUpdate', await db.getIgnoreList())
-  socket.emit('downloadProgressUpdate', db.getDownloadsProgress())
-  socket.emit('availableMovieMetaDataUpdate', await db.getAvailableMovieMetaData())
-  socket.emit('nextMetaDataUpdateDate', cron.metaDataUpdateJob.nextDate())
+  async function sendInitialData () {
+    socket.emit('version', version)
+    socket.emit('settingsUpdate', await db.getAllSettings())
+    socket.emit('scheduleUpdate', await db.getScheduleData())
+    socket.emit('finishedMoviesUpdate', await db.getFinishedMovies())
+    socket.emit('ignoreListUpdate', await db.getIgnoreList())
+    socket.emit('downloadProgressUpdate', db.getDownloadsProgress())
+    socket.emit('availableMovieMetaDataUpdate', await db.getAvailableMovieMetaData())
+    socket.emit('nextMetaDataUpdateDate', cron.metaDataUpdateJob.nextDate())
+  }
+
+  sendInitialData()
+  socket.on('getInitialData', () => sendInitialData())
+
+  // Settings
+  socket.on('updateSettings', settings => db.updateSettings(settings))
+  // Manual actions triggered in settings panel
+  socket.on('runYtdlpUpdateCheck', () => serverEvents.emit('runYtdlpUpdateCheck'))
+  socket.on('forceMetaDataUpdate', () => serverEvents.emit('forceMetaDataUpdate'))
+  socket.on('runDownloadCheck', () => serverEvents.emit('runDownloadCheck'))
 
   // Schedule
   socket.on('addEntryToSchedule', async (apiID, channel) => {
@@ -37,12 +49,6 @@ io.on('connection', async socket => {
   // Ignore list
   socket.on('addEntryToIgnoreList', async (movie) => await db.addMovieToIgnoreList(movie))
   socket.on('removeEntryFromIgnoreList', apiID => db.deleteMovieFromIgnoreList(apiID))
-
-  // Settings
-  socket.on('updateSettings', settings => db.updateSettings(settings))
-
-  // Manual meta data refresh triggered in settings panel
-  socket.on('forceMetaDataUpdate', () => serverEvents.emit('forceMetaDataUpdate'))
 })
 
 async function initializeServer () {
