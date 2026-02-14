@@ -51,6 +51,11 @@ io.on('connection', async socket => {
   socket.on('removeEntryFromIgnoreList', apiID => db.deleteMovieFromIgnoreList(apiID))
 })
 
+// Notifications for user feedback client side
+serverEvents.on('sendNotificationToClients', info => {
+  io.emit('bannerNotification', info)
+})
+
 async function initializeServer () {
   logger.info('[SERVER] Ensure all required dirs are created...')
   // Ensure downloads directory exists

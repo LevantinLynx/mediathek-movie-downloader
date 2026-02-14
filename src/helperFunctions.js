@@ -1,3 +1,4 @@
+const { serverEvents } = require('./server.js')
 const truncateUtf8Bytes = require('truncate-utf8-bytes')
 const userAgentArray = require('./userAgents.json')
 const iso639codes = require('./iso639Codes.json')
@@ -6,9 +7,34 @@ const logger = require('./logger.js')
 const { default: axios } = require('axios')
 const path = require('path')
 const fs = require('fs-extra')
+const crypto = require('crypto')
 
 const cacheDir = path.join(__dirname, '..', 'cache')
 fs.ensureDirSync(cacheDir)
+
+/**
+ * Sends a notification to all connected clients.
+ * @param {Object} info Object that contains all relevant info for the notification
+ * @param {String} info.uuid=getRndUuid() UUID of the notification. MUST BE identical to update the state of an existing notification.
+ * @param {String} info.state=done "running" or "done"
+ * @param {String} info.result=info "info", "success" or "error"
+ * @param {String} info.msg Message to be displayed to the user. MUST NOT contain HTML
+ * @param {String} [info.type] Type of logic the notification comes from. "sync" or "update"
+ * @param {Number} [info.time] Time in ms. Will make the notification disappear after set duration.
+ */
+function sendNotificationToClients (info) {
+  if (!info?.msg) {
+    return logger.error(new Error('[NOTIFICATION] No "msg" given!'))
+  } else if (info.time && typeof info.time !== 'number') {
+    return logger.error(new Error('[NOTIFICATION] "time" MUST be of type number!'))
+  } else {
+    if (!info.uuid) info.uuid = getRndUuid()
+    if (!info.state) info.state = 'done'
+    if (!info.result) info.result = 'info'
+
+    serverEvents.emit('sendNotificationToClients', info)
+  }
+}
 
 function getRandomUserAgent () {
   return userAgentArray && userAgentArray.length > 0
@@ -18,6 +44,10 @@ function getRandomUserAgent () {
 
 function getRandomInteger (min, max) {
   return Math.round(Math.random() * (max - min) + min)
+}
+
+function getRndUuid () {
+  return crypto.randomUUID()
 }
 
 function sleep (timeInMs = 2500) {
@@ -178,10 +208,12 @@ function getFileExtention (headers) {
 }
 
 module.exports = {
+  sendNotificationToClients,
   sanitizeFileAndDirNames,
   getCleanThumbnailUrl,
   getRandomUserAgent,
   getRandomInteger,
+  getRndUuid,
   sleep,
   getIso639Info,
   cacheImageAndGenerateCachedLink

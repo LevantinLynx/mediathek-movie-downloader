@@ -2,7 +2,9 @@ const path = require('path')
 const fs = require('fs-extra')
 const YTDlpWrap = require('yt-dlp-wrap').default
 const {
-  getRandomInteger
+  getRandomInteger,
+  getRndUuid,
+  sendNotificationToClients
 } = require('./helperFunctions.js')
 const { getAvailableMovieMetaDataFromApis } = require('./extractors/main.js')
 const { CronJob, CronTime } = require('cron')
@@ -58,30 +60,61 @@ function getRandomMetaDataRefreshCronTime () {
 let metaDataJobRunning = false
 async function startMetaDataRefreshJob (isForced) {
   if (metaDataJobRunning) return logger.info('[SKIP] Meta data refresh job is currently running!')
+  metaDataJobRunning = true
+  const uuid = getRndUuid()
 
   if (isForced) {
-    io.emit('bannerNotification', {
-      type: 'success',
-      msg: 'Erzwungenes neu laden der Meta Daten gestartet … dies dauert ~45 Sekunden.'
-    })
     try {
+      sendNotificationToClients({
+        state: 'running',
+        result: 'info',
+        type: 'sync',
+        msg: 'Meta Daten Cache wird gelöscht …',
+        uuid
+      })
       await db.clearEpgCache()
     } catch (err) {
       logger.error(err)
     }
   }
 
-  metaDataJobRunning = true
-  logger.info(`[META DATA] Refreshing available movie data …${isForced ? ' (forced refresh)' : ''}`)
-  const metaTimeout = setTimeout(() => {
+  sendNotificationToClients({
+    state: 'running',
+    type: 'sync',
+    msg: `${isForced ? '[ERZWUNGEN] ' : ''}Meta Daten der TV-Sender werden aktualisiert …`,
+    uuid
+  })
+
+  try {
+    logger.info(`[META DATA] Refreshing available movie data …${isForced ? ' (forced refresh)' : ''}`)
+    const metaTimeout = setTimeout(() => {
+      logger.info('[META DATA] REFRESH FAILED & REACHED TIMEOUT!')
+      throw new Error('META DATA REFRESH REACHED TIMEOUT!')
+    }, 5 * 60 * 1000)
+    const availableMovieMetaData = await getAvailableMovieMetaDataFromApis()
+    db.updateAvailableMovieMetaData(availableMovieMetaData)
+    clearTimeout(metaTimeout)
+    logger.info('[META DATA] DONE Refreshing available movie data …')
+    sendNotificationToClients({
+      state: 'done',
+      result: 'success',
+      type: 'sync',
+      msg: 'Meta Daten erfolgreich abgerufen.',
+      time: 5000,
+      uuid
+    })
+  } catch (err) {
+    logger.error('[META DATA] Error while refreshing meta data.')
+    logger.error(err)
+    sendNotificationToClients({
+      result: 'error',
+      type: 'sync',
+      msg: `Fehler beim aktualisieren der Meta Daten: "${err.message}"`,
+      uuid
+    })
+  } finally {
     metaDataJobRunning = false
-    logger.info('[META DATA] REFRESH FAILED & REACHED TIMEOUT!')
-  }, 15 * 60 * 1000)
-  const availableMovieMetaData = await getAvailableMovieMetaDataFromApis()
-  db.updateAvailableMovieMetaData(availableMovieMetaData)
-  metaDataJobRunning = false
-  clearTimeout(metaTimeout)
-  logger.info('[META DATA] DONE Refreshing available movie data …')
+  }
 }
 
 let updateJobRunning = false
@@ -91,6 +124,13 @@ async function checkAndUpdateYtDlp () {
     return
   }
   updateJobRunning = true
+  const uuid = getRndUuid()
+  sendNotificationToClients({
+    state: 'running',
+    type: 'update',
+    msg: 'Suche nach Update für yt-dlp …',
+    uuid
+  })
   try {
     // Ensure yt-dlp directory exists
     fs.ensureDirSync(path.join(__dirname, 'bin'))
@@ -111,20 +151,48 @@ async function checkAndUpdateYtDlp () {
         logger.info('[YT-DLP] Updating to version:', versions[0])
         await YTDlpWrap.downloadFromGithub(ytDlpPath)
         const updatedYtDlp = new YTDlpWrap(ytDlpPath)
-        logger.info('[YT-DLP] Update successful. Now running version:', `${await updatedYtDlp.getVersion()}`.trim())
+        const newYtDlpVersion = `${await updatedYtDlp.getVersion()}`.trim()
+        logger.info('[YT-DLP] Update successful. Now running version:', newYtDlpVersion)
+        sendNotificationToClients({
+          result: 'success',
+          type: 'update',
+          msg: `Yt-dlp update erfolgreich abgeschlossen. Alte Version: ${currentYtDlpVersion}`,
+          time: 5000,
+          uuid
+        })
       } else {
         logger.info('[YT-DLP] No update found.')
+        sendNotificationToClients({
+          type: 'update',
+          msg: 'Yt-dlp ist bereits auf der aktuellen Version.',
+          time: 5000,
+          uuid
+        })
       }
     } else {
       // ensure yt-dlp is downloaded
       logger.info('[YT-DLP] No binary found, downloading yt-dlp …')
       await YTDlpWrap.downloadFromGithub(ytDlpPath)
       const ytDlp = new YTDlpWrap(ytDlpPath)
-      logger.info('[YT-DLP] Now running version:', `${await ytDlp.getVersion()}`.trim())
+      const newYtDlpVersion = `${await ytDlp.getVersion()}`.trim()
+      logger.info('[YT-DLP] Now running version:', newYtDlpVersion)
+      sendNotificationToClients({
+        result: 'success',
+        type: 'update',
+        msg: `Yt-dlp wurde erfolgreich heruntergeladen. Aktuelle Version: ${newYtDlpVersion}`,
+        time: 5000,
+        uuid
+      })
     }
   } catch (err) {
     logger.error('[YT-DLP] Update checker ERROR:', err.message)
     logger.error(err)
+    sendNotificationToClients({
+      result: 'error',
+      type: 'update',
+      msg: `Fehler beim Update von yt-dlp. ERROR: ${err.message}`,
+      uuid
+    })
   } finally {
     updateJobRunning = false
   }
