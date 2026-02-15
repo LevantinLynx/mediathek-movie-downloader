@@ -4,10 +4,20 @@ const userAgentArray = require('./userAgents.json')
 const iso639codes = require('./iso639Codes.json')
 
 const logger = require('./logger.js')
-const { default: axios } = require('axios')
 const path = require('path')
 const fs = require('fs-extra')
 const crypto = require('crypto')
+
+const { default: axios } = require('axios')
+// Add timeout signal to EVERY request
+const timeoutInMs = 45_000
+axios.defaults.timeout = timeoutInMs
+const axiosWithTimeouts = axios.create({ timeout: timeoutInMs })
+axiosWithTimeouts.interceptors.request.use((config) => {
+  // Only set signal if not provided
+  if (!config.signal) config.signal = AbortSignal.timeout(timeoutInMs)
+  return config
+})
 
 const cacheDir = path.join(__dirname, '..', 'cache')
 fs.ensureDirSync(cacheDir)
@@ -216,5 +226,7 @@ module.exports = {
   getRndUuid,
   sleep,
   getIso639Info,
-  cacheImageAndGenerateCachedLink
+  cacheImageAndGenerateCachedLink,
+
+  axiosWithTimeouts
 }

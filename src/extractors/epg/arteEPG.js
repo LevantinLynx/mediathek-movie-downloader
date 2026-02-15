@@ -1,13 +1,13 @@
 const _ = require('lodash')
 const logger = require('../../logger.js')
-const { default: axios } = require('axios')
 const { addDays, formatDate } = require('date-fns')
 const { parseHTML } = require('linkedom')
 const {
   sleep,
   getRandomUserAgent,
   getCleanThumbnailUrl,
-  getRandomInteger
+  getRandomInteger,
+  axiosWithTimeouts: axios
 } = require('../../helperFunctions.js')
 const {
   getEpgCacheData,
@@ -24,14 +24,14 @@ async function getUpcomingMoviesFromEpg () {
     for (let i = 0; i <= epgDays; i++) {
       const epgDayString = formatDate(addDays(today, i), 'yyyy-MM-dd')
       if (!epgCache[epgDayString]) {
-        logger.debug(`[API ARTE] EPG "${epgDayString}"`)
+        logger.debug(`[API ARTE] EPG REQUEST FOR DAY "${epgDayString}"`)
         const { data: epgJSON } = await axios.get(`${baseEpgUrl}${epgDayString}`, {
           headers: {
             'User-Agent': getRandomUserAgent(),
             Accept: 'application/json'
           }
         })
-        logger.debug(`[API ARTE] EPG DONE "${epgDayString}"`)
+        logger.debug(`[API ARTE] EPG REQUEST FOR DAY DONE "${epgDayString}"`)
 
         const epgMovieData = getMoviesFromEpgJSON(epgJSON)
 

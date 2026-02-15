@@ -87,19 +87,16 @@ async function startMetaDataRefreshJob (isForced) {
 
   try {
     logger.info(`[META DATA] Refreshing available movie data …${isForced ? ' (forced refresh)' : ''}`)
-    const metaTimeout = setTimeout(() => {
-      logger.info('[META DATA] REFRESH FAILED & REACHED TIMEOUT!')
-      throw new Error('META DATA REFRESH REACHED TIMEOUT!')
-    }, 5 * 60 * 1000)
+
     const availableMovieMetaData = await getAvailableMovieMetaDataFromApis()
     db.updateAvailableMovieMetaData(availableMovieMetaData)
-    clearTimeout(metaTimeout)
+
     logger.info('[META DATA] DONE Refreshing available movie data …')
     sendNotificationToClients({
       state: 'done',
       result: 'success',
       type: 'sync',
-      msg: 'Meta Daten erfolgreich abgerufen.',
+      msg: 'Meta Daten erfolgreich aktualisiert.',
       time: 5000,
       uuid
     })
@@ -117,13 +114,15 @@ async function startMetaDataRefreshJob (isForced) {
   }
 }
 
-let updateJobRunning = false
+let ytdlpUpdateJobRunning = false
 async function checkAndUpdateYtDlp () {
-  if (updateJobRunning) {
-    logger.info('[YT-DLP] Update already in progress!')
-    return
-  }
-  updateJobRunning = true
+  if (ytdlpUpdateJobRunning) return logger.info('[YT-DLP] Update already in progress!')
+  ytdlpUpdateJobRunning = true
+  const ytdlpTimeout = setTimeout(() => {
+    ytdlpUpdateJobRunning = false
+    logger.error('[YT-DLP] Update reached timeout! Clearing update lock …')
+  }, 300_000)
+
   const uuid = getRndUuid()
   sendNotificationToClients({
     state: 'running',
@@ -183,6 +182,7 @@ async function checkAndUpdateYtDlp () {
         time: 5000,
         uuid
       })
+      if (ytdlpTimeout) clearTimeout(ytdlpTimeout)
     }
   } catch (err) {
     logger.error('[YT-DLP] Update checker ERROR:', err.message)
@@ -194,7 +194,8 @@ async function checkAndUpdateYtDlp () {
       uuid
     })
   } finally {
-    updateJobRunning = false
+    ytdlpUpdateJobRunning = false
+    if (ytdlpTimeout) clearTimeout(ytdlpTimeout)
   }
 }
 

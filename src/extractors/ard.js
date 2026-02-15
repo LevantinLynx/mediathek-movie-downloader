@@ -1,12 +1,12 @@
 const _ = require('lodash')
 const logger = require('../logger.js')
-const { default: axios } = require('axios')
 const {
   formatDate
 } = require('date-fns')
 const {
   getRandomUserAgent,
-  cacheImageAndGenerateCachedLink
+  cacheImageAndGenerateCachedLink,
+  axiosWithTimeouts: axios
 } = require('../helperFunctions.js')
 const {
   getAllSettings
@@ -140,59 +140,67 @@ async function normalizeMovieData (rawMovieData, cachedImageFileHashList, active
 }
 
 async function getAvailableMoviesFromApi () {
-  const apiUrl = 'https://api.ardmediathek.de/page-gateway/pages/ard/editorial/filme'
+  try {
+    const apiUrl = 'https://api.ardmediathek.de/page-gateway/pages/ard/editorial/filme'
 
-  logger.debug(`[API ARD] NEXT "${apiUrl}"`)
-  const { data: currentRequestresponse } = await axios.get(apiUrl, {
-    headers: {
-      'User-Agent': getRandomUserAgent(),
-      Accept: 'application/json'
+    logger.debug(`[API ARD] Requesting overall movie data. "${apiUrl}"`)
+    const { data: currentRequestresponse } = await axios.get(apiUrl, {
+      headers: {
+        'User-Agent': getRandomUserAgent(),
+        Accept: 'application/json'
+      }
+    })
+
+    if (!currentRequestresponse?.title === 'Die besten Filme in der ARD') {
+      throw new Error(`[API ARD] Request for "${apiUrl}" failed!`)
     }
-  })
+    logger.debug(`[API ARD] DONE ${apiUrl}`)
 
-  if (!currentRequestresponse?.title === 'Die besten Filme in der ARD') throw new Error(`Api request for "${apiUrl}" failed!`)
-  logger.debug(`[API ARD] DONE ${apiUrl}`)
-
-  const widgetsToExtract = [
-    'Navigation',
-    'Film-Empfehlungen',
-    // "Neu verfügbare Filme",
-    // "Aktuelle Fernsehfilme",
-    'Krimis und Thriller',
-    // "Krimi | Beliebte Teams",
-    'Komödien | Kinofilme',
-    'Dramen | Kinofilme',
-    'Preisgekrönte Filme',
-    'Literaturverfilmungen',
-    // "Coming-of-Age-Filme",
-    // "Filme zum Entspannen",
-    // "Feel-Good-Filme",
-    'Romantische Filme',
-    // "Skandinavische Krimis | Düster und spannend",
-    'Derzeit beliebte Filme',
-    // "Roadmovies",
-    'Filme für die ganze Familie',
-    // "Zauberhafte Märchen",
-    'Klassiker und Kultfilme',
-    'Nicht mehr lange online',
-    // "Krimikomödien",
-    // "Filme, die Geschichte erzählen",
-    // "Weitere Drama-Filme",
-    // "Arthouse-Filme | Leinwandperlen fürs Heimkino",
-    'Filme in Originalversion',
-    'Filme nach wahren Begebenheiten'
-    // "Kurzfilme | Von preisgekrönt bis experimentell",
-    // "Rubriken"
-  ]
-  const movies = []
-  const { widgets } = currentRequestresponse
-  for (let i = 0; i < widgets.length; i++) {
-    if (widgetsToExtract.indexOf(widgets[i].links?.self?.title) > -1) {
-      movies.push(widgets[i].teasers)
+    const widgetsToExtract = [
+      'Navigation',
+      'Film-Empfehlungen',
+      // "Neu verfügbare Filme",
+      // "Aktuelle Fernsehfilme",
+      'Krimis und Thriller',
+      // "Krimi | Beliebte Teams",
+      'Komödien | Kinofilme',
+      'Dramen | Kinofilme',
+      'Preisgekrönte Filme',
+      'Literaturverfilmungen',
+      // "Coming-of-Age-Filme",
+      // "Filme zum Entspannen",
+      // "Feel-Good-Filme",
+      'Romantische Filme',
+      // "Skandinavische Krimis | Düster und spannend",
+      'Derzeit beliebte Filme',
+      // "Roadmovies",
+      'Filme für die ganze Familie',
+      // "Zauberhafte Märchen",
+      'Klassiker und Kultfilme',
+      'Nicht mehr lange online',
+      // "Krimikomödien",
+      // "Filme, die Geschichte erzählen",
+      // "Weitere Drama-Filme",
+      // "Arthouse-Filme | Leinwandperlen fürs Heimkino",
+      'Filme in Originalversion',
+      'Filme nach wahren Begebenheiten'
+      // "Kurzfilme | Von preisgekrönt bis experimentell",
+      // "Rubriken"
+    ]
+    const movies = []
+    const { widgets } = currentRequestresponse
+    for (let i = 0; i < widgets.length; i++) {
+      if (widgetsToExtract.indexOf(widgets[i].links?.self?.title) > -1) {
+        movies.push(widgets[i].teasers)
+      }
     }
+
+    return _.flatten(movies)
+  } catch (err) {
+    logger.error(err)
+    logger.error('[API ARD] Error while loading movies.', err.message)
+    return null
   }
-
-  return _.flatten(movies)
 }
 
 module.exports = extractor

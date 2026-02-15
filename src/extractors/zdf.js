@@ -1,6 +1,5 @@
 const _ = require('lodash')
 const logger = require('../logger.js')
-const { default: axios } = require('axios')
 const {
   formatDate,
   parse: parseDate,
@@ -10,7 +9,8 @@ const {
   sleep,
   getRandomUserAgent,
   getIso639Info,
-  cacheImageAndGenerateCachedLink
+  cacheImageAndGenerateCachedLink,
+  axiosWithTimeouts: axios
 } = require('../helperFunctions.js')
 const {
   getAllSettings
@@ -68,6 +68,7 @@ async function scrapeZdfMovieData (cachedImageFileHashList) {
           logger.debug('[API ZDF] Skipping movie, channel is not marked as active.')
         } else {
           const movieApiData = await getMovieInfoFromApi(movieIDs[i])
+          if (!movieApiData) continue
           const movie = await normalizeMovieData(movieApiData, graphqlDataLookupTable[movieIDs[i]], cachedImageFileHashList)
           if (movie) movieList.push(movie)
         }

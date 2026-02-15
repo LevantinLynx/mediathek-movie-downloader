@@ -11,7 +11,11 @@ const _ = require('lodash')
 const cacheDir = path.join(__dirname, '..', '..', 'cache')
 fs.ensureDirSync(cacheDir)
 
+let isExtractionRunning = false
 async function getAvailableMovieMetaDataFromApis () {
+  if (isExtractionRunning) throw new Error('[META DATA] getAvailableMovieMetaDataFromApis is already running!')
+  isExtractionRunning = true
+
   const startTimestamp = Date.now()
   try {
     const settings = await getAllSettings()
@@ -127,11 +131,12 @@ async function getAvailableMovieMetaDataFromApis () {
     logger.debug('[META DATA] cacheValuesObject:', cacheValuesObject)
 
     // Remove unused images from cache
-    const currentImageLinks = _.flatten(cacheValuesObject.map(channel => channel.movies.map(movie => movie.img)))
+    const currentImageLinks = _.flatten(cacheValuesObject.map(channel => channel.movies.map(movie => movie.img.split('/').pop())))
     logger.debug('currentImageLinks', currentImageLinks)
+
     const cachedImageFileNames = Object.values(cachedImageFileHashList)
     for (let i = 0; i < cachedImageFileNames.length; i++) {
-      if (currentImageLinks.indexOf(`cache/${cachedImageFileNames[i]}`) === -1) {
+      if (currentImageLinks.indexOf(cachedImageFileNames[i]) === -1) {
         logger.info(`Removing file from cache: ${cachedImageFileNames[i]}`)
         await Bun.file(path.join(cacheDir, cachedImageFileNames[i])).delete()
       }
@@ -141,9 +146,11 @@ async function getAvailableMovieMetaDataFromApis () {
 
     logger.debug(`[META DATA] Data retrieval took ${doneTimestamp - startTimestamp} ms`)
 
-    return cacheValuesObject
+    isExtractionRunning = false
+    return sortedCache
   } catch (err) {
-    logger.error(err)
+    isExtractionRunning = false
+    throw err
   }
 }
 

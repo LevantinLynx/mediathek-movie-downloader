@@ -1,11 +1,11 @@
 const _ = require('lodash')
 const logger = require('../logger.js')
-const { default: axios } = require('axios')
 const { formatDate } = require('date-fns')
 const { parseHTML } = require('linkedom')
 const {
   getRandomUserAgent,
-  cacheImageAndGenerateCachedLink
+  cacheImageAndGenerateCachedLink,
+  axiosWithTimeouts: axios
 } = require('../helperFunctions.js')
 
 const extractor = {
@@ -32,6 +32,10 @@ async function scrape3satMovieData (cachedImageFileHashList) {
 
       if (videoID) {
         const movieApiData = await getMovieDataFromApiFromUrl(`${apiConfig.baseUrl}${videoID}.json`, apiConfig.apiKey)
+        if (!movieApiData) {
+          logger.error(`[3SAT API] Error while processing videoID "${videoID}".`)
+          continue
+        }
         const mainVideoContent = movieApiData.mainVideoContent?.['http://zdf.de/rels/target']
 
         const thumbnail = (
@@ -178,6 +182,7 @@ async function getMovieDataFromApiFromUrl (movieUrl, apiToken) {
     logger.error(`Error while getting info for "${movieUrl}"`)
     if (err?.response?.statusText) logger.error(`${err.response.statusCode} – ${err.response.statusText}`)
     else logger.error(err)
+    return null
   }
 }
 

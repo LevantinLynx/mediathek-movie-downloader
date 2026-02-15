@@ -1,13 +1,13 @@
 const _ = require('lodash')
 const logger = require('../logger.js')
-const { default: axios } = require('axios')
 const { formatDate } = require('date-fns')
 const {
   sleep,
   getRandomInteger,
   getRandomUserAgent,
   getCleanThumbnailUrl,
-  cacheImageAndGenerateCachedLink
+  cacheImageAndGenerateCachedLink,
+  axiosWithTimeouts: axios
 } = require('../helperFunctions.js')
 const { getUpcomingMoviesFromEpg } = require('./epg/arteEPG.js')
 
