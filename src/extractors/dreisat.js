@@ -13,7 +13,8 @@ const extractor = {
   validUrlRegex: [
     /https?:\/\/(?:www\.)?3sat\.de\/(?:[^/]+\/)*([^/?#&]+)\.html/
   ],
-  channel: '3sat'
+  channel: '3sat',
+  validChannelList: ['3sat']
 }
 
 async function scrape3satMovieData (cachedImageFileHashList) {
@@ -55,7 +56,8 @@ async function scrape3satMovieData (cachedImageFileHashList) {
           description: movieApiData.leadParagraph,
           time: {},
           restrictions: [],
-          apiID: videoID
+          apiID: videoID,
+          channel: '3sat'
         }
 
         if (mainVideoContent?.duration) {

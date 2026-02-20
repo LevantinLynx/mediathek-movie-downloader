@@ -1,9 +1,13 @@
 const logger = require('../logger.js')
 const zdfExtractor = require('./zdf.js')
 const ardExtractor = require('./ard.js')
-const dreisatExtractor = require('./dreisat.js')
 const arteExtractor = require('./arte.js')
+const dreisatExtractor = require('./dreisat.js')
 const { getAllSettings } = require('../database.js')
+const {
+  sendNotificationToClients
+} = require('../helperFunctions.js')
+const { getImdbSuggestionsForTitle } = require('../matcher/imdb.js')
 const path = require('path')
 const fs = require('fs-extra')
 const _ = require('lodash')
@@ -12,6 +16,7 @@ const cacheDir = path.join(__dirname, '..', '..', 'cache')
 fs.ensureDirSync(cacheDir)
 
 let isExtractionRunning = false
+let cache = {}
 async function getAvailableMovieMetaDataFromApis () {
   if (isExtractionRunning) throw new Error('[META DATA] getAvailableMovieMetaDataFromApis is already running!')
   isExtractionRunning = true
@@ -23,7 +28,7 @@ async function getAvailableMovieMetaDataFromApis () {
       .filter(channel => channel.active)
       .map(channel => channel.name.toLowerCase().replace(' ', '_'))
     logger.debug('activeChannels', activeChannels)
-    const cache = {}
+    cache = {}
 
     // Get all cached files and generate hash list from names
     const cachedImageFiles = fs.readdirSync(cacheDir)
@@ -32,125 +37,123 @@ async function getAvailableMovieMetaDataFromApis () {
       cachedImageFileHashList[cachedImageFiles[i].split('.')[0]] = cachedImageFiles[i]
     }
 
-    async function getZdfMovies (cache) {
-      if (
-        activeChannels.indexOf('zdf') > -1 ||
-        activeChannels.indexOf('zdfneo') > -1 ||
-        activeChannels.indexOf('zdftivi') > -1 ||
-        activeChannels.indexOf('phoenix') > -1 ||
-        activeChannels.indexOf('funk') > -1 ||
-        activeChannels.indexOf('kika') > -1
-      ) {
-        const zdfApiData = await zdfExtractor.scrapeMovieData(cachedImageFileHashList)
-        const zdfApiDataChannels = Object.keys(zdfApiData)
-        for (let i = 0; i < zdfApiDataChannels.length; i++) {
-          if (
-            activeChannels.indexOf(zdfApiDataChannels[i]) > -1 &&
-            zdfApiData[zdfApiDataChannels[i]]
-          ) {
-            cache[zdfApiDataChannels[i]] = {
-              channel: zdfApiDataChannels[i],
-              updated: new Date(),
-              movies: zdfApiData[zdfApiDataChannels[i]]
-            }
-          }
-        }
-      }
-    }
-
-    async function get3satMovies (cache) {
-      if (activeChannels.indexOf('3sat') > -1) {
-        const sat3Data = await dreisatExtractor.scrapeMovieData(cachedImageFileHashList)
-        if (sat3Data?.length > 0) {
-          cache['3sat'] = {
-            channel: '3sat',
-            updated: new Date(),
-            movies: sat3Data
-          }
-        }
-      }
-    }
-
-    async function getArteMovies (cache) {
-      if (activeChannels.indexOf('arte') > -1) {
-        const arteData = await arteExtractor.scrapeMovieData(cachedImageFileHashList)
-        if (arteData) {
-          cache.arte = {
-            channel: 'arte',
-            updated: new Date(),
-            movies: arteData
-          }
-        }
-      }
-    }
-
-    async function getArdMovies (cache) {
-      if (
-        activeChannels.indexOf('ard') > -1 ||
-        activeChannels.indexOf('ard_alpha') > -1 ||
-        activeChannels.indexOf('das_erste') > -1 ||
-        activeChannels.indexOf('br') > -1 ||
-        activeChannels.indexOf('hr') > -1 ||
-        activeChannels.indexOf('mdr') > -1 ||
-        activeChannels.indexOf('ndr') > -1 ||
-        activeChannels.indexOf('rbb') > -1 ||
-        activeChannels.indexOf('sr') > -1 ||
-        activeChannels.indexOf('swr') > -1 ||
-        activeChannels.indexOf('wdr') > -1 ||
-        activeChannels.indexOf('one') > -1
-      ) {
-        const ardApiData = await ardExtractor.scrapeMovieData(cachedImageFileHashList)
-        const ardApiDataChannels = Object.keys(ardApiData)
-        for (let i = 0; i < ardApiDataChannels.length; i++) {
-          if (
-            activeChannels.indexOf(ardApiDataChannels[i]) > -1 &&
-            ardApiData[ardApiDataChannels[i]]
-          ) {
-            cache[ardApiDataChannels[i]] = {
-              channel: ardApiDataChannels[i],
-              updated: new Date(),
-              movies: ardApiData[ardApiDataChannels[i]]
-            }
-          }
-        }
-      }
-    }
-
-    // Load data from all channels in parallel
-    await Promise.all([
-      getZdfMovies(cache),
-      get3satMovies(cache),
-      getArteMovies(cache),
-      getArdMovies(cache)
-    ])
-
-    // Ensure channels are always in the same order
-    const sortedCache = _.pick(cache, Object.keys(cache).sort())
-
-    const cacheValuesObject = Object.values(sortedCache)
-    logger.debug('[META DATA] cacheValuesObject:', cacheValuesObject)
-
-    // Remove unused images from cache
-    const currentImageLinks = _.flatten(cacheValuesObject.map(channel => channel.movies.map(movie => movie.img.split('/').pop())))
-    logger.debug('currentImageLinks', currentImageLinks)
-
-    const cachedImageFileNames = Object.values(cachedImageFileHashList)
-    for (let i = 0; i < cachedImageFileNames.length; i++) {
-      if (currentImageLinks.indexOf(cachedImageFileNames[i]) === -1) {
-        logger.info(`Removing file from cache: ${cachedImageFileNames[i]}`)
-        await Bun.file(path.join(cacheDir, cachedImageFileNames[i])).delete()
-      }
-    }
+    await getExtractorMovies(zdfExtractor, activeChannels, cachedImageFileHashList)
+    await getExtractorMovies(dreisatExtractor, activeChannels, cachedImageFileHashList)
+    await getExtractorMovies(ardExtractor, activeChannels, cachedImageFileHashList)
+    await getExtractorMovies(arteExtractor, activeChannels, cachedImageFileHashList)
 
     const doneTimestamp = Date.now()
 
-    logger.debug(`[META DATA] Data retrieval took ${doneTimestamp - startTimestamp} ms`)
+    logger.debug(`[META DATA] Data retrieval took ${doneTimestamp - startTimestamp} ms and found ${Object.keys(cache).length} movies.`)
+    logger.debug(`[META DATA] Channels: ${_.uniq(Object.values(cache).map(movie => movie.channel)).sort()}`)
 
     isExtractionRunning = false
-    return sortedCache
+    return _.omitBy(cache, _.isNil)
   } catch (err) {
     isExtractionRunning = false
     throw err
+  }
+}
+
+function generateIdFromApiID (apiID) {
+  return new Bun
+    .CryptoHasher('sha1')
+    .update(apiID)
+    .digest('hex')
+    .substring(0, 10)
+}
+
+/**
+ * If channel is marked active in settings,
+ * retrieve movies from api and add them to cache object
+ * @param {Object} channelExtractor object for channel extractor import
+ * @param {String[]} activeChannels List of active channels
+ * @param {Object} cachedImageFileHashList List of img files on disk
+ */
+async function getExtractorMovies (channelExtractor, activeChannels, cachedImageFileHashList) {
+  const activeAndValidChannels = _.intersection(channelExtractor.validChannelList, activeChannels)
+  if (activeAndValidChannels.length > 0) {
+    let channelApiData = await channelExtractor.scrapeMovieData(cachedImageFileHashList)
+    channelApiData = channelApiData.filter(movie => activeAndValidChannels.indexOf(movie.channel) > -1)
+    for (let i = 0; i < channelApiData.length; i++) {
+      const movie = channelApiData[i]
+      const hash = generateIdFromApiID(movie.apiID)
+      cache[hash] = {
+        ...channelApiData[i],
+        id: hash
+      }
+      delete cache[hash].apiID
+
+      await addImdbSuggestionToMovie(hash)
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      sendNotificationToClients({
+        result: 'success',
+        msg: `${channelApiData.length} Filme für "${channelExtractor.channel}" angerufen.`,
+        time: 5000
+      })
+    }
+  } else {
+    logger.debug('[META DATA] Skipping extractor. No channels marked for retrieval.')
+  }
+}
+
+async function addImdbSuggestionToMovie (hash) {
+  try {
+    const movie = cache[hash]
+    const suggestions = await getImdbSuggestionsForTitle(movie.title)
+
+    for (let i = 0; i < suggestions.length; i++) {
+      const suggestion = suggestions[i]
+      let match = (
+        // Title matching
+        suggestion.title.indexOf(movie.title) > -1 ||
+        movie.title.indexOf(suggestion.title) > -1
+      )
+      if (!match) {
+        // Match by year
+        if (
+          suggestion.year && (
+            movie.description.indexOf(suggestion.year) > -1 ||
+            movie.imgAlt?.indexOf(suggestion.year) > -1
+          )
+        ) match = true
+        // Matching by actor names
+        if (
+          suggestion.info &&
+          suggestion.info
+            .split(', ')
+            .map(actor => (
+              movie.description.indexOf(actor) > -1 ||
+              movie.imgAlt?.indexOf(actor) > -1
+            ))
+            .filter(value => value === true)
+            .length > 0
+        ) match = true
+      }
+      if (match) {
+        cache[hash].imdb = {
+          match: suggestion,
+          suggestions
+        }
+        break
+      }
+    }
+
+    if (!cache[hash].imdb) {
+      cache[hash].imdb = {
+        match: null,
+        suggestions
+      }
+    }
+  } catch (err) {
+    logger.error(err)
+    if (!cache[hash].imdb) {
+      cache[hash].imdb = {
+        match: null,
+        suggestions: []
+      }
+    }
   }
 }
 

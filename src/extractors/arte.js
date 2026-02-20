@@ -16,7 +16,8 @@ const extractor = {
   validUrlRegex: [
     /https?:\/\/(?:www\.)?arte\.tv\/({fr|de|en|es|it|pl})\/videos\/(\d{6}-\d{3}-[AF])/
   ],
-  channel: 'arte'
+  channel: 'arte',
+  validChannelList: ['arte']
 }
 
 async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
@@ -48,7 +49,8 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
         description: metadata.description,
         time: {},
         duration: `${Math.ceil(metadata.duration.seconds / 60)} min`,
-        apiID: metadata.providerId
+        apiID: metadata.providerId,
+        channel: 'arte'
       }
 
       if (rights?.begin) {

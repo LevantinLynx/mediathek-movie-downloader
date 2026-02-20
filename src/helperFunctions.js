@@ -2,6 +2,7 @@ const { serverEvents } = require('./server.js')
 const truncateUtf8Bytes = require('truncate-utf8-bytes')
 const userAgentArray = require('./userAgents.json')
 const iso639codes = require('./iso639Codes.json')
+const { getAllSettings } = require('./database.js')
 
 const logger = require('./logger.js')
 const path = require('path')
@@ -108,16 +109,22 @@ function getIso639Info (iso639Code1Or2) {
 }
 
 async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
+  const settings = await getAllSettings()
+  if (!settings.enableImageCaching) {
+    logger.debug('[IMG CACHE] Disabled, returning original url.')
+    return url
+  }
+
   // Fallback if image is unavailable
   if (!url) return '/imgs/movie_image_placeholder.svg'
 
   if ( // Don't cache fsk warning images
-    url.indexOf('https://zdf-prod-futura.zdf.de/static/mediathek/fskImages/fsk_16_1280x720.jpg') > -1
+    url.indexOf('https://zdf-prod-futura.zdf.de/static/mediathek/fskImages/') > -1
   ) return url
 
   const cleanUrlForHashing = url.split('?')[0].split('#')[0]
 
-  const fileNameHash = new Bun.CryptoHasher('md5').update(cleanUrlForHashing).digest('hex')
+  const fileNameHash = new Bun.CryptoHasher('sha1').update(cleanUrlForHashing).digest('hex').substring(0, 10)
 
   if (cacheHashList[fileNameHash]) {
     logger.debug('File is already cached!')
@@ -125,7 +132,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
   }
 
   try {
-    logger.debug('Caching image', url)
+    logger.debug('[IMG CACHE] Caching image:', url)
     let result = await axios.get(url, { responseType: 'arraybuffer' })
     let fileExtention = getFileExtention(result.headers)
 
@@ -133,46 +140,46 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
     // so we just try a few common ones ...
     if (url.indexOf('https://api.ardmediathek.de/') === 0) {
       if (fileExtention === null) {
-        logger.debug('Trying width 940')
+        logger.debug('[IMG CACHE] Trying width 940')
         result = await axios.get(url.replace('w=768', 'w=940'), { responseType: 'arraybuffer' })
         fileExtention = getFileExtention(result.headers)
       }
       if (fileExtention === null) {
-        logger.debug('Trying width 720')
+        logger.debug('[IMG CACHE] Trying width 720')
         result = await axios.get(url.replace('w=768', 'w=720'), { responseType: 'arraybuffer' })
         fileExtention = getFileExtention(result.headers)
       }
       if (fileExtention === null) {
-        logger.debug('Trying width 640')
+        logger.debug('[IMG CACHE] Trying width 640')
         result = await axios.get(url.replace('w=768', 'w=640'), { responseType: 'arraybuffer' })
         fileExtention = getFileExtention(result.headers)
       }
       if (fileExtention === null) {
-        logger.debug('Trying width 1280')
+        logger.debug('[IMG CACHE] Trying width 1280')
         result = await axios.get(url.replace('w=768', 'w=1280'), { responseType: 'arraybuffer' })
         fileExtention = getFileExtention(result.headers)
       }
       if (fileExtention === null) {
-        logger.debug('Trying width 1920')
+        logger.debug('[IMG CACHE] Trying width 1920')
         result = await axios.get(url.replace('w=768', 'w=1920'), { responseType: 'arraybuffer' })
         fileExtention = getFileExtention(result.headers)
       }
       if (fileExtention === null) {
-        logger.debug('Trying without width')
+        logger.debug('[IMG CACHE] Trying without width')
         result = await axios.get(url.split('?')[0], { responseType: 'arraybuffer' })
         fileExtention = getFileExtention(result.headers)
       }
     }
 
     if (fileExtention === null) {
-      logger.error('No image type detected!', 'Returning original URL.')
+      logger.error('[IMG CACHE] No image type detected! Returning original URL.')
       return url
     }
 
     const fileData = Buffer.from(result.data, 'binary')
     await Bun.write(path.join(cacheDir, `${fileNameHash}.${fileExtention}`), fileData)
 
-    logger.debug('DONE Caching', url)
+    logger.debug('[IMG CACHE] DONE Caching:', url)
     await sleep(getRandomInteger(275, 555)) // avoid rate limiting while downloading images
     return path.join('cache', `${fileNameHash}.${fileExtention}`)
   } catch (err) {

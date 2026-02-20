@@ -96,7 +96,8 @@ function normalizeEpgMovieData (movieData) {
       description: movieData.teaserText,
       time: {},
       duration: `${Math.ceil(movieData.duration / 60)} min`,
-      apiID: movieData.programId
+      apiID: movieData.programId,
+      channel: 'arte'
     }
 
     if (movieData.availability) {

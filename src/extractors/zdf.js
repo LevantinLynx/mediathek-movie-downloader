@@ -22,7 +22,8 @@ const extractor = {
     /https?:\/\/www\.zdf\.de\/(?:play\/)?(?:video|dokus|(?:magazine|reportagen|konzerte|filme)\/[^/?#&]+)(?:\/[^/?#&]+)*\/([^/?#&.]+)/,
     /https?:\/\/www\.zdf\.de\/(?:[^/]+\/)*([^/?#&]+)\.html/
   ],
-  channel: 'zdf'
+  channel: 'zdf',
+  validChannelList: ['zdf', 'zdfneo', 'zdftivi', 'phoenix', 'funk', 'kika']
 }
 
 const localCache = {
@@ -65,7 +66,7 @@ async function scrapeZdfMovieData (cachedImageFileHashList) {
           .toLowerCase().replace(' ', '_')
         if (activeChannels.indexOf(currentChannel) === -1) {
           // Skip movie if channel is not active
-          logger.debug('[API ZDF] Skipping movie, channel is not marked as active.')
+          logger.debug('[API ZDF] Skipping movie, channel is not marked as active.', currentChannel)
         } else {
           const movieApiData = await getMovieInfoFromApi(movieIDs[i])
           if (!movieApiData) continue
@@ -77,19 +78,8 @@ async function scrapeZdfMovieData (cachedImageFileHashList) {
 
     movieList = _.orderBy(movieList, ['time.type', 'time.date'], ['desc', 'asc'])
 
-    const channels = _.uniq(movieList.map(movie => movie.channel)).sort()
-    logger.debug(channels, movieList.map(x => x.url))
-    const dataByChannel = {}
-    for (let i = 0; i < channels.length; i++) {
-      dataByChannel[channels[i].toLowerCase()] = movieList
-        .filter(movie => movie.channel === channels[i])
-        .map(movie => {
-          delete movie.channel
-          return movie
-        })
-    }
     logger.info(`[ZDF API] Movies found: ${movieIDs?.length}`)
-    return dataByChannel
+    return movieList
   } catch (err) {
     logger.error(err)
   }
@@ -181,7 +171,7 @@ async function normalizeMovieData (rawMovieData, rawGrapthQlData, cachedImageFil
         ? `${Math.ceil((graphqlInfo.videoInfo.duration || legacyInfo.duration) / 60)} min`
         : null,
       apiID: graphqlInfo.id || legacyInfo.id,
-      channel: graphqlInfo.channel || legacyInfo.channel,
+      channel: (graphqlInfo.channel || legacyInfo.channel).toLowerCase().replace(' ', '_'),
       restrictions: [],
       audioLangs: [],
       subLangs: [],

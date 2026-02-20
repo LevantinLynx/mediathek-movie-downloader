@@ -21,6 +21,7 @@ async function initialize () {
   db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
   db.ignore = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
   db.done = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
+  db.imdb = await new Datastore({ filename: path.join(databaseDirPath, 'imdb.db'), autoload: true })
   logger.info('[DB] Done initializing databases.')
 
   logger.info('[DB] Resetting lingering progress entries.')
@@ -38,11 +39,11 @@ async function initialize () {
 // ****************** //
 async function getAvailableMovieMetaData () {
   const movieMetaData = await db.metaData.findAsync({ type: 'availableMovieMetaData' })
-  return movieMetaData?.[0]?.data || []
+  return movieMetaData?.[0]?.data || {}
 }
 
 function updateAvailableMovieMetaData (availableMovieMetaDataArray) {
-  if (availableMovieMetaDataArray?.length > 0) {
+  if (Object.keys(availableMovieMetaDataArray)?.length > 0) {
     db.metaData.updateAsync({
       type: 'availableMovieMetaData'
     }, {
@@ -263,6 +264,31 @@ function deleteDownloadProgressCacheEntry (apiID) {
   if (db.cache.downloadsInProgress[apiID]) delete db.cache.downloadsInProgress[apiID]
 }
 
+// /////////////// //
+// CACHE FUNCTIONS //
+// /////////////// //
+async function getImdbSuggestionsForTitleFromDB (title) {
+  try {
+    const doc = await db.imdb.findOneAsync({ id: encodeURIComponent(title) })
+    if (doc?.data) logger.debug('[DB] IMDB CACHE HIT:', encodeURIComponent(title))
+    return doc?.data || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+async function saveImdbSuggestionsForTitleToDB (title, data) {
+  try {
+    await db.imdb.insertAsync({
+      id: encodeURIComponent(title),
+      date: new Date(),
+      data
+    })
+  } catch (err) {
+    logger.error(err)
+  }
+}
+
 // //////// //
 // SETTINGS //
 // //////// //
@@ -274,13 +300,14 @@ async function getAllSettings () {
     maxDownloadRate: 1.5,
     maxDownloadRateUnit: 'M',
 
-    removeSpacesFromDirNames: false,
-
     downloadResolutionLimit: 'none',
     preferedDownloadLanguage: 'de',
     includeAudioTranscription: true,
     includeClearLanguage: true,
     includeSubtitles: true,
+
+    enableImageCaching: true,
+
     debugLogsEnabled: false,
 
     channelSelection: [
@@ -373,6 +400,9 @@ module.exports = {
   getDownloadsProgress,
   updateDownloadProgressEntry,
   deleteDownloadProgressCacheEntry,
+
+  getImdbSuggestionsForTitleFromDB,
+  saveImdbSuggestionsForTitleToDB,
 
   // SETTINGS
   getAllSettings,

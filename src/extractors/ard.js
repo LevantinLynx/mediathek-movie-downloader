@@ -15,7 +15,8 @@ const {
 const extractor = {
   scrapeMovieData: scrapeArdMovieData,
   validUrlRegex: [],
-  channel: 'ard'
+  channel: 'ard',
+  validChannelList: ['ard', 'ard_alpha', 'das_erste', 'br', 'hr', 'mdr', 'ndr', 'rbb', 'sr', 'swr', 'wdr', 'one']
 }
 
 async function scrapeArdMovieData (cachedImageFileHashList) {
@@ -41,29 +42,8 @@ async function scrapeArdMovieData (cachedImageFileHashList) {
     movieList = _.orderBy(movieList, ['time.date'], ['asc'])
     movieList = _.uniqBy(_.flatten(movieList), 'url')
 
-    const channels = _.compact(
-      _.uniq(
-        movieList
-          .map(movie => movie.channel)
-          .filter(channel => channel && [
-            'ard', 'ard_alpha', 'das_erste', 'br', 'hr', 'mdr', 'ndr',
-            'rbb', 'sr', 'swr', 'wdr', 'one', 'funk', 'kika'
-          ].indexOf(channel) > -1)
-      ).sort()
-    )
-    logger.debug(channels, movieList.map(x => x.title))
-    const dataByChannel = {}
-    for (let i = 0; i < channels.length; i++) {
-      dataByChannel[channels[i].toLowerCase()] = movieList
-        .filter(movie => movie.channel === channels[i])
-        .map(movie => {
-          delete movie.channel
-          return movie
-        })
-    }
-
     logger.info(`[ARD API] Movies found: ${movieList?.length}`)
-    return dataByChannel
+    return movieList
   } catch (err) {
     logger.error(err)
   }
@@ -84,11 +64,10 @@ async function normalizeMovieData (rawMovieData, cachedImageFileHashList, active
     } = rawMovieData
 
     const currentChannel = `${publicationService?.name}`.toLowerCase().replace(' ', '_')
-    if (activeChannels.indexOf(currentChannel) === -1) {
-      // Skip movie if channel is not active
-      logger.debug('[API ARD] Skipping movie, channel is not marked as active.')
-      return null
-    }
+    // Skip channels not belonging to extractor channel group
+    if (extractor.validChannelList.indexOf(currentChannel) === -1) return null
+    // Skip inactive channels
+    if (activeChannels.indexOf(currentChannel) === -1) return null
 
     const movieDate = new Date(availableTo)
 

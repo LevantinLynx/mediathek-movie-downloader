@@ -81,7 +81,7 @@ async function startMetaDataRefreshJob (isForced) {
   sendNotificationToClients({
     state: 'running',
     type: 'sync',
-    msg: `${isForced ? '[ERZWUNGEN] ' : ''}Meta Daten der TV-Sender werden aktualisiert …`,
+    msg: `Meta Daten der TV-Sender werden aktualisiert …${isForced ? ' (Erzwungener Abruf) ' : ''}`,
     uuid
   })
 
