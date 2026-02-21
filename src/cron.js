@@ -74,7 +74,7 @@ async function startMetaDataRefreshJob (isForced) {
       })
       await db.clearEpgCache()
     } catch (err) {
-      logger.error(err)
+      logger.error('[META DATA] EPG Clear Error', err)
     }
   }
 
@@ -101,7 +101,7 @@ async function startMetaDataRefreshJob (isForced) {
       uuid
     })
   } catch (err) {
-    logger.error('[META DATA] Error while refreshing meta data.')
+    logger.error('[META DATA] Error while refreshing meta data.', err.message)
     logger.error(err)
     sendNotificationToClients({
       result: 'error',

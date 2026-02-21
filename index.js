@@ -1,6 +1,7 @@
 const { version } = require('./package.json')
 const logger = require('./src/logger.js')
 const db = require('./src/database.js')
+const matcher = require('./src/matcher/main.js')
 const fs = require('fs-extra')
 const path = require('path')
 const { server, io, serverEvents } = require('./src/server.js')
@@ -33,6 +34,20 @@ io.on('connection', async socket => {
   socket.on('forceMetaDataUpdate', () => serverEvents.emit('forceMetaDataUpdate'))
   socket.on('runDownloadCheck', () => serverEvents.emit('runDownloadCheck'))
 
+  // Imdb/Tmdb Suggestions
+  socket.on('getSuggestionsForMovie', async movieID => {
+    try {
+      const suggestions = await matcher.getMovieSuggestionsByMovieID(movieID)
+      if (suggestions) socket.emit('suggestionsForMovie', suggestions)
+    } catch (err) {
+      logger.error('[SOCKET] getSuggestionsForMovie', err)
+      socket.emit('suggestionsForMovie', {
+        movieID,
+        error: `Fehler beim laden der Vorschläge. "${err.message}"`
+      })
+    }
+  })
+
   // Schedule
   socket.on('addEntryToSchedule', async (apiID, channel) => {
     const status = await scheduleDownloadByIdAndChannel(apiID, channel)
@@ -64,6 +79,28 @@ async function initializeServer () {
   await cron.checkAndUpdateYtDlp()
 
   await db.initialize()
+
+  if (!process.env.OMDB_API_KEY || !process.env.TMDB_API_READ_ACCESS_TOKEN) {
+    logger.info('🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈')
+  }
+  logger.info('[API KEYS] If you add API keys on an existing install, remove the "tmdbMovies.db", "imdbMovies.db", "tmdbSuggestions.db" & "imdbSuggestions.db" and restart the server!')
+  if (!process.env.OMDB_API_KEY) {
+    logger.error('[API OMDB] No OMDB_API_KEY set, not retrieving ratings for movies!')
+    logger.info('[API OMDB] To get the full experience, get an API key and set it in the environment variables.')
+    logger.info('[API OMDB] Request and API Key on https://www.omdbapi.com/apikey.aspx the free account is fine. (Consider donating!)')
+  } else {
+    logger.info('[API OMDB] API Key detected! Will request ratings info for movies!')
+  }
+  if (!process.env.TMDB_API_READ_ACCESS_TOKEN) {
+    logger.error('[API TMDB] No TMDB_API_READ_ACCESS_TOKEN set, using fallback search.')
+    logger.info('[API TMDB] To get the full experience, get an API key and set it in the environment variables.')
+    logger.info('[API TMDB] Register an account (free) on https://www.themoviedb.org/signup and get your API Read Access Token. https://developer.themoviedb.org/docs/getting-started')
+  } else {
+    logger.info('[API TMDB] API Key detected! Will request additional info for movies!')
+  }
+  if (!process.env.OMDB_API_KEY || !process.env.TMDB_API_READ_ACCESS_TOKEN) {
+    logger.info('🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈 🛈')
+  }
 
   // Start express server
   server.listen(process.env.SERVER_PORT || 12345, '0.0.0.0', () => {

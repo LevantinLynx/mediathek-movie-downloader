@@ -75,10 +75,13 @@ async function normalizeMovieData (rawMovieData, cachedImageFileHashList, active
       title: `${shortTitle}`.split(' | ')[0].trim(),
       url: `https://ardmediathek.de/video/${rawMovieData.links?.target?.urlId}`,
       img: await cacheImageAndGenerateCachedLink(
-        images.aspect16x9?.src?.replace('{width}', 768),
+        images.aspect16x9?.src,
         cachedImageFileHashList
       ),
-      imgCover: images.aspect3x4?.src?.replace('{width}', 320),
+      imgCover: await cacheImageAndGenerateCachedLink(
+        images.aspect3x4?.src,
+        cachedImageFileHashList
+      ),
       description: show?.shortSynopsis,
       time: {
         date: movieDate,

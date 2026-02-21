@@ -7,7 +7,6 @@ const { getAllSettings } = require('../database.js')
 const {
   sendNotificationToClients
 } = require('../helperFunctions.js')
-const { getImdbSuggestionsForTitle } = require('../matcher/imdb.js')
 const path = require('path')
 const fs = require('fs-extra')
 const _ = require('lodash')
@@ -83,8 +82,6 @@ async function getExtractorMovies (channelExtractor, activeChannels, cachedImage
         id: hash
       }
       delete cache[hash].apiID
-
-      await addImdbSuggestionToMovie(hash)
     }
     if (process.env.NODE_ENV !== 'production') {
       sendNotificationToClients({
@@ -95,65 +92,6 @@ async function getExtractorMovies (channelExtractor, activeChannels, cachedImage
     }
   } else {
     logger.debug('[META DATA] Skipping extractor. No channels marked for retrieval.')
-  }
-}
-
-async function addImdbSuggestionToMovie (hash) {
-  try {
-    const movie = cache[hash]
-    const suggestions = await getImdbSuggestionsForTitle(movie.title)
-
-    for (let i = 0; i < suggestions.length; i++) {
-      const suggestion = suggestions[i]
-      let match = (
-        // Title matching
-        suggestion.title.indexOf(movie.title) > -1 ||
-        movie.title.indexOf(suggestion.title) > -1
-      )
-      if (!match) {
-        // Match by year
-        if (
-          suggestion.year && (
-            movie.description.indexOf(suggestion.year) > -1 ||
-            movie.imgAlt?.indexOf(suggestion.year) > -1
-          )
-        ) match = true
-        // Matching by actor names
-        if (
-          suggestion.info &&
-          suggestion.info
-            .split(', ')
-            .map(actor => (
-              movie.description.indexOf(actor) > -1 ||
-              movie.imgAlt?.indexOf(actor) > -1
-            ))
-            .filter(value => value === true)
-            .length > 0
-        ) match = true
-      }
-      if (match) {
-        cache[hash].imdb = {
-          match: suggestion,
-          suggestions
-        }
-        break
-      }
-    }
-
-    if (!cache[hash].imdb) {
-      cache[hash].imdb = {
-        match: null,
-        suggestions
-      }
-    }
-  } catch (err) {
-    logger.error(err)
-    if (!cache[hash].imdb) {
-      cache[hash].imdb = {
-        match: null,
-        suggestions: []
-      }
-    }
   }
 }
 

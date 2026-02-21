@@ -13,25 +13,38 @@ const db = {
   }
 }
 async function initialize () {
-  // Initialize all databases
-  logger.info('[DB] Initializing databases...')
-  db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule.db'), autoload: true })
-  db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
-  db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
-  db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
-  db.ignore = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
-  db.done = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
-  db.imdb = await new Datastore({ filename: path.join(databaseDirPath, 'imdb.db'), autoload: true })
-  logger.info('[DB] Done initializing databases.')
+  try {
+    // Initialize all databases
+    logger.info('[DB] Initializing databases...')
+    db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule.db'), autoload: true })
+    db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
+    db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
+    db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
+    db.ignore = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
+    db.done = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
 
-  logger.info('[DB] Resetting lingering progress entries.')
-  const scheduleItems = await getScheduleData()
-  for (let i = 0; i < scheduleItems.length; i++) {
-    if (scheduleItems[i].inProgress) {
-      await setScheduleEntryInProgress(scheduleItems[i], false)
+    db.imdbMovies = await new Datastore({ filename: path.join(databaseDirPath, 'imdbMovies.db'), autoload: true })
+    db.imdbSuggestions = await new Datastore({ filename: path.join(databaseDirPath, 'imdbSuggestions.db'), autoload: true })
+
+    db.tmdbMovies = await new Datastore({ filename: path.join(databaseDirPath, 'tmdbMovies.db'), autoload: true })
+    db.tmdbSuggestions = await new Datastore({ filename: path.join(databaseDirPath, 'tmdbSuggestions.db'), autoload: true })
+
+    db.platformMatchingInfo = await new Datastore({ filename: path.join(databaseDirPath, 'platformMatchingInfo.db'), autoload: true })
+
+    db.omdb = await new Datastore({ filename: path.join(databaseDirPath, 'omdb.db'), autoload: true })
+    logger.info('[DB] Done initializing databases.')
+
+    logger.info('[DB] Resetting lingering progress entries.')
+    const scheduleItems = await getScheduleData()
+    for (let i = 0; i < scheduleItems.length; i++) {
+      if (scheduleItems[i].inProgress) {
+        await setScheduleEntryInProgress(scheduleItems[i], false)
+      }
     }
+    logger.info('[DB] Done resetting lingering progress entries.')
+  } catch (err) {
+    logger.error('[DB] initialize', err)
   }
-  logger.info('[DB] Done resetting lingering progress entries.')
 }
 
 // ****************** //
@@ -40,6 +53,10 @@ async function initialize () {
 async function getAvailableMovieMetaData () {
   const movieMetaData = await db.metaData.findAsync({ type: 'availableMovieMetaData' })
   return movieMetaData?.[0]?.data || {}
+}
+async function getMovieMetaDataByID (movieID) {
+  const movieMetaData = await db.metaData.findAsync({ type: 'availableMovieMetaData' })
+  return movieMetaData?.[0]?.data?.[movieID] || null
 }
 
 function updateAvailableMovieMetaData (availableMovieMetaDataArray) {
@@ -267,25 +284,209 @@ function deleteDownloadProgressCacheEntry (apiID) {
 // /////////////// //
 // CACHE FUNCTIONS //
 // /////////////// //
-async function getImdbSuggestionsForTitleFromDB (title) {
+
+// IMDB Movies & Suggestions
+/**
+ * Get movie object for provided imdbid
+ * @param {String} imdbid as string
+ * @returns {Object | null} Movie object or null
+ */
+async function getImdbMovieByID (imdbid) {
   try {
-    const doc = await db.imdb.findOneAsync({ id: encodeURIComponent(title) })
-    if (doc?.data) logger.debug('[DB] IMDB CACHE HIT:', encodeURIComponent(title))
-    return doc?.data || null
+    const doc = await db.imdbMovies.findOneAsync({ imdbid })
+    if (doc?.imdbid) logger.debug('[DB] IMDB CACHE HIT:', imdbid)
+    return doc || null
   } catch (err) {
     logger.error(err)
     return null
   }
 }
-async function saveImdbSuggestionsForTitleToDB (title, data) {
+/**
+ * Save provided imdb movie object
+ * @param {Object} document imdb movie object
+ */
+async function saveImdbMovie (document) {
   try {
-    await db.imdb.insertAsync({
-      id: encodeURIComponent(title),
-      date: new Date(),
-      data
+    await db.imdbMovies.updateAsync({
+      imdbid: document.imdbid
+    }, {
+      ...document,
+      date: new Date()
+    }, {
+      upsert: true
     })
   } catch (err) {
+    logger.error('[DB] IMDB CACHE ERROR', err)
+  }
+}
+/**
+ * Get suggestion imdbid array for provided title
+ * @param {String} encodedUriTitle Movie title encoded with encodeURIComponent()
+ * @returns {String[]} Array of imdbid
+ */
+async function getImdbSuggestionsForTitle (encodedUriTitle) {
+  try {
+    const doc = await db.imdbSuggestions.findOneAsync({ encodedUriTitle })
+    if (doc?.suggestions) logger.debug('[DB] IMDB CACHE HIT:', encodedUriTitle)
+    return doc?.suggestions || null
+  } catch (err) {
     logger.error(err)
+    return null
+  }
+}
+/**
+ * Save suggestion object for title
+ * @param {Object} document suggestion object for title encoded with encodeURIComponent()
+ */
+async function saveImdbSuggestions (document) {
+  try {
+    await db.imdbSuggestions.updateAsync({
+      encodedUriTitle: document.encodedUriTitle
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] TMDB CACHE ERROR', err)
+  }
+}
+
+// TMDB Movies & Suggestions
+/**
+ * Get movie object for provided imdbid
+ * @param {String} tmdbid as string
+ * @returns {Object | null} Movie object or null
+ */
+async function getTmdbMovieByID (tmdbid) {
+  try {
+    const doc = await db.tmdbMovies.findOneAsync({ tmdbid })
+    if (doc?.tmdbid) logger.debug('[DB] TMDB CACHE HIT:', tmdbid)
+    return doc || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+/**
+ * Save provided tmdb movie object
+ * @param {Object} document tmdb movie object
+ */
+async function saveTmdbMovie (document) {
+  try {
+    await db.tmdbMovies.updateAsync({
+      tmdbid: document.tmdbid
+    }, {
+      ...document,
+      date: new Date()
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] TMDB CACHE ERROR', err)
+  }
+}
+/**
+ * Get suggestion tmdbid array for provided title
+ * @param {String} encodedUriTitle Movie title encoded with encodeURIComponent()
+ * @returns {String[]} Array of tmdbid
+ */
+async function getTmdbSuggestionsForTitle (encodedUriTitle) {
+  try {
+    const doc = await db.tmdbSuggestions.findOneAsync({ encodedUriTitle })
+    if (doc?.suggestions) logger.debug('[DB] TMDB CACHE HIT:', encodedUriTitle)
+    return doc?.suggestions || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+/**
+ * Save suggestion object for title
+ * @param {Object} document suggestion object for title encoded with encodeURIComponent()
+ */
+async function saveTmdbSuggestions (document) {
+  try {
+    await db.tmdbSuggestions.updateAsync({
+      encodedUriTitle: document.encodedUriTitle
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] TMDB CACHE ERROR', err)
+  }
+}
+
+async function getPlatformMatchingInfoFromDB (tmdbOrImdbID) {
+  try {
+    if (['number', 'string'].indexOf(typeof tmdbOrImdbID) > -1) tmdbOrImdbID = `${tmdbOrImdbID}`
+    else throw new Error('[DB] Platform Match tmdbOrImdbID is no string!')
+
+    const searchObject = (tmdbOrImdbID.indexOf('tt') === 0)
+      ? { imdbid: tmdbOrImdbID }
+      : { tmdbid: tmdbOrImdbID }
+    const doc = await db.platformMatchingInfo.findOneAsync(searchObject)
+    if (doc?.imdbid) logger.debug('[DB] Platform Match CACHE HIT:', tmdbOrImdbID)
+    return doc || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+async function savePlatformMatchingInfoToDB (document) {
+  try {
+    await db.platformMatchingInfo.updateAsync({
+      tmdbid: document.tmdbid,
+      imdbid: document.imdbid
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] Platform Match CACHE ERROR', err)
+  }
+}
+
+async function getOmdbInfoFromDB (searchString) {
+  try {
+    const searchObject = (searchString.indexOf('tt') === 0)
+      ? { imdbID: searchString }
+      : { query: encodeURIComponent(searchString) }
+    const doc = await db.omdb.findOneAsync(searchObject)
+    if (doc?.imdbID) logger.debug('[DB] OMDB CACHE HIT:', encodeURIComponent(searchString))
+    return doc || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+
+async function saveOmdbInfoToDB (document) {
+  try {
+    await db.omdb.updateAsync({
+      imdbID: document.imdbID
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] OMDB CACHE ERROR', err)
   }
 }
 
@@ -307,6 +508,8 @@ async function getAllSettings () {
     includeSubtitles: true,
 
     enableImageCaching: true,
+
+    defaultMatcher: 'tmdb',
 
     debugLogsEnabled: false,
 
@@ -374,6 +577,7 @@ module.exports = {
 
   // MOVIE META DATA
   getAvailableMovieMetaData,
+  getMovieMetaDataByID,
   updateAvailableMovieMetaData,
   // EPG DATA
   getEpgCacheData,
@@ -401,8 +605,21 @@ module.exports = {
   updateDownloadProgressEntry,
   deleteDownloadProgressCacheEntry,
 
-  getImdbSuggestionsForTitleFromDB,
-  saveImdbSuggestionsForTitleToDB,
+  getImdbMovieByID,
+  saveImdbMovie,
+  getImdbSuggestionsForTitle,
+  saveImdbSuggestions,
+
+  getTmdbMovieByID,
+  saveTmdbMovie,
+  getTmdbSuggestionsForTitle,
+  saveTmdbSuggestions,
+
+  getPlatformMatchingInfoFromDB,
+  savePlatformMatchingInfoToDB,
+
+  getOmdbInfoFromDB,
+  saveOmdbInfoToDB,
 
   // SETTINGS
   getAllSettings,

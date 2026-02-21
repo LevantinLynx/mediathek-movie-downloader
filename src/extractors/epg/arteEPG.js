@@ -61,7 +61,8 @@ async function getUpcomingMoviesFromEpg () {
 
     return epgMovies
   } catch (err) {
-    logger.error(err)
+    if (err.message === 'canceled') logger.error('[EPG CACHE ARTE] REQUEST TIMEOUT!')
+    else logger.error(err)
     return null
   }
 }
@@ -72,7 +73,6 @@ function getMoviesFromEpgJSON (epgJSON) {
   let epgMovies = []
   let zoneData = []
   const zones = epgJSON.value.zones
-  logger.debug('[API ARTE] EPG ZONES DATA RAW', zones)
   for (let i = 0; i < zones.length; i++) {
     zoneData = [...zoneData, ...(zones[i]?.content?.data || [])]
   }
@@ -83,7 +83,7 @@ function getMoviesFromEpgJSON (epgJSON) {
   }
 
   epgMovies = _.compact(epgMovies)
-  logger.debug('[API ARTE] EPG (epgMovies)', epgMovies)
+  logger.debug('[API ARTE] EPG (epgMovies)', epgMovies.length)
   return epgMovies
 }
 

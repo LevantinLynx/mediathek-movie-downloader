@@ -94,6 +94,15 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
 
     const epgData = await getUpcomingMoviesFromEpg()
 
+    if (epgData) {
+      for (let i = 0; i < epgData.length; i++) {
+        epgData[i].img = await cacheImageAndGenerateCachedLink(
+          getCleanThumbnailUrl(epgData[i].img),
+          cachedImageFileHashList
+        )
+      }
+    }
+
     movieList = _.uniqBy(
       _.flatten([movieList, epgData]),
       'apiID'
