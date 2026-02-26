@@ -60,6 +60,43 @@ io.on('connection', async socket => {
     }
   })
 
+  // Finished Downloads list
+  socket.on('removeEntryFromFinished', movieID => db.deleteFinishedEntry(movieID))
+
+  // Ignore list
+  socket.on('addEntryToIgnoreList', async movieID => {
+    try {
+      const movie = await db.getMovieMetaDataByID(movieID)
+      if (movie?.id) await db.addMovieToIgnoreList(movie)
+      else {
+        socket.emit('bannerNotification', {
+          result: 'error',
+          msg: `Kein Film mit ID "${movieID}" gefunden.`,
+          time: 5000
+        })
+      }
+    } catch (err) {
+      logger.error('[SOCKET] Error while adding movie to ignorelist', err)
+      socket.emit('bannerNotification', {
+        result: 'error',
+        msg: `Fehler beim ignorieren des Film: "${err.message}"`,
+        time: 5000
+      })
+    }
+  })
+  socket.on('removeEntryFromIgnoreList', async movieID => {
+    try {
+      await db.deleteMovieFromIgnoreList(movieID)
+    } catch (err) {
+      logger.error('[SOCKET] Error while adding movie to ignorelist', err)
+      socket.emit('bannerNotification', {
+        result: 'error',
+        msg: `Fehler beim entfernen des Film von der Ignore Liste: "${err.message}"`,
+        time: 5000
+      })
+    }
+  })
+
   // Schedule
   socket.on('addEntryToSchedule', async (apiID, channel) => {
     const status = await scheduleDownloadByIdAndChannel(apiID, channel)
@@ -69,13 +106,6 @@ io.on('connection', async socket => {
     }
   })
   socket.on('removeEntryFromSchedule', apiID => db.deleteScheduleEntry(apiID))
-
-  // Finished Downloads list
-  socket.on('removeEntryFromFinished', apiID => db.deleteFinishedEntry(apiID))
-
-  // Ignore list
-  socket.on('addEntryToIgnoreList', async (movie) => await db.addMovieToIgnoreList(movie))
-  socket.on('removeEntryFromIgnoreList', apiID => db.deleteMovieFromIgnoreList(apiID))
 })
 
 // Notifications for user feedback client side
@@ -159,8 +189,9 @@ db.events.on('finishedMoviesUpdate', async () => {
   io.emit('finishedMoviesUpdate', await db.getFinishedMovies())
 })
 
-db.events.on('ignoreListUpdate', async () => {
-  io.emit('ignoreListUpdate', await db.getIgnoreList())
+db.events.on('ignoreListUpdate', async (err) => {
+  if (err) io.emit('bannerNotification', { type: 'error', msg: err.errorMsg, time: 5000 })
+  else io.emit('ignoreListUpdate', await db.getIgnoreList())
 })
 
 serverEvents.on('startDownloadProgressJob', () => {

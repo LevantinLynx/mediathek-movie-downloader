@@ -20,8 +20,8 @@ async function initialize () {
     db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
     db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
     db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
-    db.ignore = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
-    db.done = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
+
+    db.doneAndIgnore = await new Datastore({ filename: path.join(databaseDirPath, 'doneAndIgnore.db'), autoload: true })
 
     db.imdbMovies = await new Datastore({ filename: path.join(databaseDirPath, 'imdbMovies.db'), autoload: true })
     db.imdbSuggestions = await new Datastore({ filename: path.join(databaseDirPath, 'imdbSuggestions.db'), autoload: true })
@@ -192,15 +192,16 @@ async function deleteScheduleEntry (apiID) {
   })
 }
 
-async function setFinishedMovieState (movie, doneState) {
-  db.done.updateAsync({
-    apiID: movie.apiID
+async function setFinishedMovieState (movie) {
+  db.doneAndIgnore.updateAsync({
+    id: movie.id,
+    type: 'done'
   }, {
     $set: {
-      apiID: movie.apiID,
+      id: movie.id,
       title: movie.title,
       channel: movie.channel,
-      done: doneState,
+      type: 'done',
       date: new Date()
     }
   }, {
@@ -210,7 +211,7 @@ async function setFinishedMovieState (movie, doneState) {
 }
 
 async function getFinishedMovies () {
-  const finishedMovies = await db.done.findAsync({ done: true })
+  const finishedMovies = await db.doneAndIgnore.findAsync({ type: 'done' })
   return _.orderBy(
     finishedMovies.map(movie => {
       delete movie._id
@@ -220,52 +221,66 @@ async function getFinishedMovies () {
   )
 }
 
-async function deleteFinishedEntry (apiID) {
-  db.done.remove({ apiID }, {}, err => {
+async function deleteFinishedEntry (movieID) {
+  db.doneAndIgnore.remove({ id: movieID, type: 'done' }, {}, err => {
     if (err) {
       logger.error(err)
-      events.emit('finishedMoviesUpdate', { error: 'Error while deleting done entry.', apiID })
+      events.emit('finishedMoviesUpdate', { error: 'Error while deleting done entry.', movieID })
     } else {
       events.emit('finishedMoviesUpdate')
     }
   })
 }
 
-async function addMovieToIgnoreList (movie) {
-  db.ignore.updateAsync({
-    apiID: movie.apiID
-  }, {
-    $set: {
-      apiID: movie.apiID,
-      title: movie.title,
-      channel: movie.channel
-    }
-  }, {
-    upsert: true
-  })
-  events.emit('ignoreListUpdate')
-}
-
 async function getIgnoreList () {
-  const ignoreList = await db.ignore.findAsync({})
-  return _.orderBy(
-    ignoreList.map(movie => {
-      delete movie._id
-      return movie
-    }),
-    ['title']
-  )
+  try {
+    const ignoreList = await db.doneAndIgnore.findAsync({ type: 'ignore' })
+    return _.orderBy(
+      ignoreList.map(movie => {
+        delete movie._id
+        return movie
+      }),
+      ['title']
+    )
+  } catch (err) {
+    logger.error(err)
+    return []
+  }
 }
 
-async function deleteMovieFromIgnoreList (apiID) {
-  db.ignore.remove({ apiID }, {}, err => {
-    if (err) {
-      logger.error(err)
-      events.emit('ignoreListUpdate', { error: 'Error while deleting ignore entry.', apiID })
-    } else {
-      events.emit('ignoreListUpdate')
-    }
-  })
+async function addMovieToIgnoreList (movie) {
+  try {
+    await db.doneAndIgnore.updateAsync({
+      id: movie.id,
+      type: 'ignore'
+    }, {
+      $set: {
+        id: movie.id,
+        title: movie.title,
+        channel: movie.channel,
+        type: 'ignore',
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+    events.emit('ignoreListUpdate')
+  } catch (err) {
+    events.emit('ignoreListUpdate', {
+      errorMsg: `Fehler beim löschen der Film ID "${movie.id}" von der Ignore List. "${err.message}"`
+    })
+  }
+}
+
+async function deleteMovieFromIgnoreList (movieID) {
+  try {
+    await db.doneAndIgnore.removeAsync({ id: movieID, type: 'ignore' }, {})
+    events.emit('ignoreListUpdate')
+  } catch (err) {
+    events.emit('ignoreListUpdate', {
+      errorMsg: `Fehler beim hinzufügen der Film ID "${movieID}" zur Ignore List. "${err.message}"`
+    })
+  }
 }
 
 // //////////////////////////////// //

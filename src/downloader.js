@@ -57,7 +57,7 @@ async function downloadMovie (movie) {
     await ytDlpDownloader(movie)
 
     // Add movie to finished download index
-    await db.setFinishedMovieState(movie, true)
+    await db.setFinishedMovieState(movie)
     // Remove movie from schedule
     await db.deleteScheduleEntry(movie.apiID)
 
