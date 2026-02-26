@@ -2,29 +2,27 @@ const { addHours, formatDate, addDays } = require('date-fns')
 const db = require('./database.js')
 const logger = require('./logger.js')
 
-async function scheduleDownloadByIdAndChannel (apiID, channel) {
+async function scheduleDownloadByMovieID (movieID) {
   try {
-    const metaData = await db.getAvailableMovieMetaData()
-    const channelData = metaData.filter(x => x.channel === channel)[0].movies
-    const movieData = channelData.filter(x => x.apiID === apiID)[0]
+    const movie = await db.getMovieMetaDataByID(movieID)
 
     const scheduleObject = {
-      apiID,
-      channel,
-      title: movieData.title,
-      downloadUrl: movieData.url,
-      scheduleDates: getScheduleDates(movieData),
+      id: movie.id,
+      title: movie.title,
+      channel: movie.channel,
+      downloadUrl: movie.url,
+      scheduleDates: getScheduleDates(movie),
       failed: false,
       failCount: 0
     }
 
-    logger.debug(scheduleObject)
     db.addScheduleEntry(scheduleObject)
+    logger.debug('[SCHEDULER] scheduleObject', scheduleObject)
 
-    return { ok: true, title: movieData.title }
+    return { ok: true, title: movie.title }
   } catch (err) {
     logger.error(err)
-    return { error: `Error while scheduling download for "${apiID}" - ${channel}` }
+    return { error: `Error while scheduling download for "${movieID}".` }
   }
 }
 
@@ -52,5 +50,5 @@ function getScheduleDates (movie) {
 }
 
 module.exports = {
-  scheduleDownloadByIdAndChannel
+  scheduleDownloadByMovieID
 }

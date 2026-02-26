@@ -120,8 +120,8 @@ function clearEpgCache () {
 // /////// //
 // SCHDULE //
 // /////// //
-async function getScheduleData (apiID) {
-  const options = apiID ? { apiID } : {}
+async function getScheduleData (movieID) {
+  const options = movieID ? { id: movieID } : {}
   let scheduleData = await db.schedule.findAsync(options)
 
   scheduleData = _.sortBy(scheduleData, [function (entry) {
@@ -133,17 +133,20 @@ async function getScheduleData (apiID) {
   })
 }
 
-async function addScheduleEntry (entry) {
-  if (entry && entry.apiID) {
+async function addScheduleEntry (movie) {
+  if (movie && movie.id) {
     db.schedule.updateAsync({
-      apiID: entry.apiID
+      id: movie.id
     }, {
-      $set: entry
+      $set: {
+        ...movie,
+        date: new Date()
+      }
     }, {
       upsert: true
     })
     events.emit('scheduleUpdate')
-    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${entry.apiID}"`)
+    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${movie.id}"`)
   } else {
     logger.info('[DB] SCHEDULE UPDATE: No valid entry provided.')
   }
@@ -181,11 +184,11 @@ async function getScheduleEntryInProgressCount () {
   }
 }
 
-async function deleteScheduleEntry (apiID) {
-  db.schedule.remove({ apiID }, {}, err => {
+async function deleteScheduleEntry (movieID) {
+  db.schedule.remove({ id: movieID }, {}, err => {
     if (err) {
       logger.error(err)
-      events.emit('scheduleUpdate', { error: 'Error while deleting schedule entry.', apiID })
+      events.emit('scheduleUpdate', { error: 'Error while deleting schedule entry.', movieID })
     } else {
       events.emit('scheduleUpdate')
     }
