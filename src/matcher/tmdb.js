@@ -52,7 +52,7 @@ async function getTmdbSuggestionsForTitle (title) {
       )
     }
 
-    logger.debug('[MATCHER] TMDB Suggestions:', suggestions)
+    logger.debug('[MATCHER] TMDB Suggestions:', suggestions?.length)
     return suggestions
   } catch (err) {
     logger.error('[MATCHER] TMDB Search request:', err.message)

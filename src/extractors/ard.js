@@ -78,10 +78,6 @@ async function normalizeMovieData (rawMovieData, cachedImageFileHashList, active
         images.aspect16x9?.src,
         cachedImageFileHashList
       ),
-      imgCover: await cacheImageAndGenerateCachedLink(
-        images.aspect3x4?.src,
-        cachedImageFileHashList
-      ),
       description: show?.shortSynopsis,
       time: {
         date: movieDate,

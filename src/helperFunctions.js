@@ -170,7 +170,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
 
     if (fileExtention === null) {
       logger.error('[IMG CACHE] No image type detected! Fallback URL.')
-      return '/imgs/movie_image_placeholder.svg'
+      return '/imgs/movie_image_not_found.svg'
     }
 
     const resizedFileExtention = 'webp'
@@ -205,68 +205,38 @@ async function getArdImageData (urlObject) {
   try {
     const cleanUrl = `${urlObject.origin}${urlObject.pathname}`
     const searchParams = Object.fromEntries(urlObject.searchParams)
-    const availableSizes = ['960', '840', '768', '1280', '1440', '1600', '1920', '2560', '', '600', '480', '320']
+    const availableSizes = ['960', '940', '840', '768', '720', '1280', '1440', '1600', '1920', '2560', '', '600', '480', '320']
+    const urlParamsToCheck = ['', '?w=']
     let fileExtention = null
     let result = null
 
+    // Generate uri options
     if (searchParams.ch) {
-      // ch and w
+      urlParamsToCheck.unshift(`?ch=${searchParams.ch}`)
+      urlParamsToCheck.unshift(`?ch=${searchParams.ch}&w=1920`)
+
       for (let i = 0; i < availableSizes.length; i++) {
-        if (fileExtention !== null) break
-        logger.debug(`[IMG CACHE] (ARD) Trying width clean url and "?ch=${searchParams.ch}&w=${availableSizes[i]}"`)
-        result = await axiosWithTimeouts.get(`${cleanUrl}?ch=${searchParams.ch}&w=${availableSizes[i]}`, {
-          headers: {
-            'User-Agent': getRandomUserAgent()
-          },
-          responseType: 'arraybuffer',
-          signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
-        })
-        fileExtention = getFileExtention(result.headers)
+        urlParamsToCheck.push(`?ch=${searchParams.ch}&w=${availableSizes[i]}`)
+        urlParamsToCheck.push(`?w=${availableSizes[i]}&ch=${searchParams.ch}`)
       }
     }
+    for (let i = 0; i < availableSizes.length; i++) {
+      urlParamsToCheck.push(`?w=${availableSizes[i]}`)
+    }
 
-    if (fileExtention === null && searchParams.ch) {
-      // w and ch
-      for (let i = 0; i < availableSizes.length; i++) {
-        if (fileExtention !== null) break
-        logger.debug(`[IMG CACHE] (ARD) Trying width clean url and "?w=${availableSizes[i]}&ch=${searchParams.ch}"`)
-        result = await axiosWithTimeouts.get(`${cleanUrl}?w=${availableSizes[i]}&ch=${searchParams.ch}`, {
-          headers: {
-            'User-Agent': getRandomUserAgent()
-          },
+    // Check for images
+    for (let i = 0; i < urlParamsToCheck.length; i++) {
+      if (fileExtention !== null) break
+      try {
+        if (i !== 0) await sleep(getRandomInteger(25, 75))
+        logger.debug(`[IMG CACHE] (ARD) Trying width clean url and "${urlParamsToCheck[i]}"`)
+        result = await axiosWithTimeouts.get(`${cleanUrl}${urlParamsToCheck[i]}`, {
           responseType: 'arraybuffer',
           signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
         })
         fileExtention = getFileExtention(result.headers)
-      }
-    }
-
-    if (fileExtention === null && searchParams.ch) {
-      // only ch
-      logger.debug(`[IMG CACHE] (ARD) Trying width clean url and "?ch=${searchParams.ch}"`)
-      result = await axiosWithTimeouts.get(`${cleanUrl}?ch=${searchParams.ch}`, {
-        headers: {
-          'User-Agent': getRandomUserAgent()
-        },
-        responseType: 'arraybuffer',
-        signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
-      })
-      fileExtention = getFileExtention(result.headers)
-    }
-
-    // only w
-    if (fileExtention === null) {
-      for (let i = 0; i < availableSizes.length; i++) {
-        if (fileExtention !== null) break
-        logger.debug(`[IMG CACHE] (ARD) Trying width clean url and "?w=${availableSizes[i]}"`)
-        result = await axiosWithTimeouts.get(`${cleanUrl}?w=${availableSizes[i]}`, {
-          headers: {
-            'User-Agent': getRandomUserAgent()
-          },
-          responseType: 'arraybuffer',
-          signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
-        })
-        fileExtention = getFileExtention(result.headers)
+      } catch (e) {
+        logger.error(e.message)
       }
     }
 
@@ -285,27 +255,22 @@ async function getArteImageData (urlObject) {
   try {
     const cleanUrl = `${urlObject.origin}${urlObject.pathname.split('/').slice(0, -1).join('/')}`
     const availableSizes = ['940x530', '720x406', '620x350', '480x270', '430x242', '325x183']
+    const urlParamsToCheck = []
     let fileExtention = null
     let result = null
 
+    // Generate uri options
     for (let i = 0; i < availableSizes.length; i++) {
-      if (fileExtention !== null) break
-      logger.debug(`[IMG CACHE] (ARTE) Trying width clean url and "/${availableSizes[i]}?type=TEXT"`)
-      result = await axiosWithTimeouts.get(`${cleanUrl}/${availableSizes[i]}?type=TEXT`, {
-        headers: {
-          'User-Agent': getRandomUserAgent()
-        },
-        responseType: 'arraybuffer',
-        signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
-      })
-      fileExtention = getFileExtention(result.headers)
+      urlParamsToCheck.push(`${availableSizes[i]}?type=TEXT`)
+      urlParamsToCheck.push(`${availableSizes[i]}`)
     }
 
-    if (fileExtention === null) {
-      for (let i = 0; i < availableSizes.length; i++) {
-        if (fileExtention !== null) break
-        logger.debug(`[IMG CACHE] (ARTE) Trying width clean url and "/${availableSizes[i]}"`)
-        result = await axiosWithTimeouts.get(`${cleanUrl}/${availableSizes[i]}`, {
+    // Check for images
+    for (let i = 0; i < urlParamsToCheck.length; i++) {
+      if (fileExtention !== null) break
+      try {
+        logger.debug(`[IMG CACHE] (ARTE) Trying width clean url and "/${urlParamsToCheck[i]}"`)
+        result = await axiosWithTimeouts.get(`${cleanUrl}/${urlParamsToCheck[i]}`, {
           headers: {
             'User-Agent': getRandomUserAgent()
           },
@@ -313,6 +278,8 @@ async function getArteImageData (urlObject) {
           signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
         })
         fileExtention = getFileExtention(result.headers)
+      } catch (e) {
+        logger.error(e.message)
       }
     }
 
@@ -331,16 +298,27 @@ async function get3satImageData (urlObject) {
   try {
     const cleanUrl = `${urlObject.origin}${urlObject.pathname}`.split('~')[0]
     const searchParams = Object.fromEntries(urlObject.searchParams)
-    const availableSizes = ['1280x720', '1920x1080', '384x216']
+    const availableSizes = ['1280x720', '1920x1080', '384x216', '640x720', '240x270']
+    const urlParamsToCheck = []
     let fileExtention = null
     let result = null
 
+    // Generate uri options
     if (searchParams.cb) {
-      // cb
       for (let i = 0; i < availableSizes.length; i++) {
-        if (fileExtention !== null) break
-        logger.debug(`[IMG CACHE] (3sat) Trying width clean url and "~${availableSizes[i]}?cb=${searchParams.cb}"`)
-        result = await axiosWithTimeouts.get(`${cleanUrl}~${availableSizes[i]}?cb=${searchParams.cb}`, {
+        urlParamsToCheck.push(`${availableSizes[i]}?cb=${searchParams.cb}`)
+      }
+    }
+    for (let i = 0; i < availableSizes.length; i++) {
+      urlParamsToCheck.push(`${availableSizes[i]}`)
+    }
+
+    // Check for images
+    for (let i = 0; i < urlParamsToCheck.length; i++) {
+      if (fileExtention !== null) break
+      try {
+        logger.debug(`[IMG CACHE] (3sat) Trying width clean url and "~${urlParamsToCheck[i]}"`)
+        result = await axiosWithTimeouts.get(`${cleanUrl}~${urlParamsToCheck[i]}`, {
           headers: {
             'User-Agent': getRandomUserAgent()
           },
@@ -348,20 +326,9 @@ async function get3satImageData (urlObject) {
           signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
         })
         fileExtention = getFileExtention(result.headers)
+      } catch (e) {
+        logger.error(e.message)
       }
-    }
-
-    for (let i = 0; i < availableSizes.length; i++) {
-      if (fileExtention !== null) break
-      logger.debug(`[IMG CACHE] (3sat) Trying width clean url and "~${availableSizes[i]}"`)
-      result = await axiosWithTimeouts.get(`${cleanUrl}~${availableSizes[i]}`, {
-        headers: {
-          'User-Agent': getRandomUserAgent()
-        },
-        responseType: 'arraybuffer',
-        signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
-      })
-      fileExtention = getFileExtention(result.headers)
     }
 
     return { result, fileExtention }
@@ -382,15 +349,29 @@ async function getZdfImageData (urlObject) {
     const cleanUrl = `${urlObject.origin}${urlObject.pathname}`.split('~')[0]
     const searchParams = Object.fromEntries(urlObject.searchParams)
     const availableSizes = ['936x520', '768x432', '1300x650', '1500x800', '1920x1080', '384x216']
+    const urlParamsToCheck = []
     let fileExtention = null
     let result = null
 
+    // Generate uri options
     if (searchParams.cb) {
       // cb
       for (let i = 0; i < availableSizes.length; i++) {
-        if (fileExtention !== null) break
-        logger.debug(`[IMG CACHE] (ZDF) Trying width clean url and "~${availableSizes[i]}?cb=${searchParams.cb}"`)
-        result = await axiosWithTimeouts.get(`${cleanUrl}~${availableSizes[i]}?cb=${searchParams.cb}`, {
+        urlParamsToCheck.push(`${availableSizes[i]}?cb=${searchParams.cb}`)
+        urlParamsToCheck.push(`${availableSizes[i]}`)
+      }
+    } else {
+      for (let i = 0; i < availableSizes.length; i++) {
+        urlParamsToCheck.push(`${availableSizes[i]}`)
+      }
+    }
+
+    // Check for images
+    for (let i = 0; i < urlParamsToCheck.length; i++) {
+      if (fileExtention !== null) break
+      try {
+        logger.debug(`[IMG CACHE] (ZDF) Trying width clean url and "~${urlParamsToCheck[i]}"`)
+        result = await axiosWithTimeouts.get(`${cleanUrl}~${urlParamsToCheck[i]}`, {
           headers: {
             'User-Agent': getRandomUserAgent()
           },
@@ -398,20 +379,9 @@ async function getZdfImageData (urlObject) {
           signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
         })
         fileExtention = getFileExtention(result.headers)
+      } catch (e) {
+        logger.error(e.message)
       }
-    }
-
-    for (let i = 0; i < availableSizes.length; i++) {
-      if (fileExtention !== null) break
-      logger.debug(`[IMG CACHE] (ZDF) Trying width clean url and "~${availableSizes[i]}"`)
-      result = await axiosWithTimeouts.get(`${cleanUrl}~${availableSizes[i]}`, {
-        headers: {
-          'User-Agent': getRandomUserAgent()
-        },
-        responseType: 'arraybuffer',
-        signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
-      })
-      fileExtention = getFileExtention(result.headers)
     }
 
     return { result, fileExtention }
@@ -427,32 +397,26 @@ async function getZdfImageDataEpgFotobase (urlObject) {
   // poster N/A
   // landscape 384x216 768x432 1280x720 1920x1080
   try {
-    const cleanUrl = `${urlObject.origin}${urlObject.pathname}`.split('~')[0]
+    const cleanUrl = `${urlObject.origin}${urlObject.pathname}`
     const searchParams = Object.fromEntries(urlObject.searchParams)
     const availableSizes = ['1280x720', '768x432', '1920x1080', '384x216']
+    const urlParamsToCheck = []
     let fileExtention = null
     let result = null
 
+    // Generate uri options
     if (searchParams.layout) {
-      // layout
       for (let i = 0; i < availableSizes.length; i++) {
-        if (fileExtention !== null) break
-        logger.debug(`[IMG CACHE] (ZDF) Trying width clean url and "?layout=${availableSizes[i]}"`)
-        result = await axiosWithTimeouts.get(`${cleanUrl}?layout=${availableSizes[i]}`, {
-          headers: {
-            'User-Agent': getRandomUserAgent()
-          },
-          responseType: 'arraybuffer',
-          signal: AbortSignal.timeout(IMG_CACHE_REQUEST_TIMEOUT)
-        })
-        fileExtention = getFileExtention(result.headers)
+        urlParamsToCheck.push(`?layout=${availableSizes[i]}`)
       }
     }
+    urlParamsToCheck.push('')
 
-    for (let i = 0; i < availableSizes.length; i++) {
+    // Check for images
+    for (let i = 0; i < urlParamsToCheck.length; i++) {
       if (fileExtention !== null) break
       logger.debug('[IMG CACHE] (ZDF) Trying width clean url only')
-      result = await axiosWithTimeouts.get(`${cleanUrl}`, {
+      result = await axiosWithTimeouts.get(`${cleanUrl}${urlParamsToCheck[i]}`, {
         headers: {
           'User-Agent': getRandomUserAgent()
         },
@@ -482,7 +446,7 @@ async function getFallbackImageData (url) {
 
     return { result, fileExtention }
   } catch (err) {
-    logger.error(err)
+    logger.error(err.message)
     return { result: null, fileExtention: null }
   }
 }

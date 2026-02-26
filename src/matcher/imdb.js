@@ -71,7 +71,7 @@ async function getImdbSuggestionsForTitle (title) {
       )
     }
 
-    logger.debug('[MATCHER] IMDB Suggestions:', suggestions)
+    logger.debug('[MATCHER] IMDB Suggestions:', suggestions?.length)
     return suggestions
   } catch (err) {
     logger.error('[MATCHER] IMDB ERROR', err)

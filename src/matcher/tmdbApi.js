@@ -105,7 +105,7 @@ async function getTmdbApiSuggestionsForTitle (title) {
       )
     }
 
-    logger.debug('[MATCHER] TMDB API Suggestions:', suggestions)
+    logger.debug('[MATCHER] TMDB API Suggestions:', suggestions?.length)
     return suggestions
   } catch (err) {
     logger.error('[MATCHER] TMDB API Search request:', err.message)
