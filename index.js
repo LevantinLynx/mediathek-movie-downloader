@@ -35,6 +35,18 @@ io.on('connection', async socket => {
   socket.on('runDownloadCheck', () => serverEvents.emit('runDownloadCheck'))
 
   // Imdb/Tmdb Suggestions
+  socket.on('getCachedSuggestionsForMovie', async movieID => {
+    try {
+      const suggestions = await matcher.getCachedMovieSuggestionsByMovieID(movieID)
+      if (suggestions) socket.emit('suggestionsForMovie', suggestions)
+    } catch (err) {
+      logger.error('[SOCKET] getSuggestionsForMovie', err)
+      socket.emit('suggestionsForMovie', {
+        movieID,
+        error: `Fehler beim laden der Vorschläge. "${err.message}"`
+      })
+    }
+  })
   socket.on('getSuggestionsForMovie', async movieID => {
     try {
       const suggestions = await matcher.getMovieSuggestionsByMovieID(movieID)
