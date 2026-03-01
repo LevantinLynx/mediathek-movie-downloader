@@ -41,6 +41,20 @@ async function getAvailableMovieMetaDataFromApis () {
     await getExtractorMovies(ardExtractor, activeChannels, cachedImageFileHashList)
     await getExtractorMovies(arteExtractor, activeChannels, cachedImageFileHashList)
 
+    // Remove unused images from cache
+    const currentImageLinks = Object.values(cache).map(movie => movie.img.split('/').pop())
+    logger.debug('[META DATA] CACHE: Cached image count:', currentImageLinks.length)
+
+    if (process.env.NODE_ENV === 'production') {
+      const cachedImageFileNames = Object.values(cachedImageFileHashList)
+      for (let i = 0; i < cachedImageFileNames.length; i++) {
+        if (currentImageLinks.indexOf(cachedImageFileNames[i]) === -1) {
+          logger.info(`Removing file from cache: ${cachedImageFileNames[i]}`)
+          await Bun.file(path.join(cacheDir, cachedImageFileNames[i])).delete()
+        }
+      }
+    }
+
     const doneTimestamp = Date.now()
 
     logger.debug(`[META DATA] Data retrieval took ${doneTimestamp - startTimestamp} ms and found ${Object.keys(cache).length} movies.`)
