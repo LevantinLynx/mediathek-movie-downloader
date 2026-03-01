@@ -1,6 +1,6 @@
 const logger = require('./logger.js')
 const path = require('path')
-const YTDlpWrap = require('yt-dlp-wrap').default
+const YTDlpWrap = require('./ytDlpWrapper.ts').default
 const db = require('./database.js')
 const _ = require('lodash')
 const { serverEvents } = require('./server.js')

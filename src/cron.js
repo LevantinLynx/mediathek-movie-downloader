@@ -1,6 +1,6 @@
 const path = require('path')
 const fs = require('fs-extra')
-const YTDlpWrap = require('yt-dlp-wrap').default
+const YTDlpWrap = require('./ytDlpWrapper.ts').default
 const {
   getRandomInteger,
   getRndUuid,
