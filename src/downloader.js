@@ -636,10 +636,11 @@ for file in *.mp4 ; do
   rm "$file"
 done
 
-for filename in *.vtt; do
-  fname="\${filename%.*}"
-  ffmpeg -i "$filename" "$fname.srt"
-done
+${settings.convertSubtitles
+  ? `for file in *.vtt; do
+  filename="\${file%.*}"
+  ffmpeg -i "$file" "$filename.srt"
+done` : ''}
 
 find . -size 0 -delete`
 
@@ -701,10 +702,11 @@ cd "${movie.baseDownloadPath}"
 # Combine video and all audio tracks from the ${audioJson.length} files
 ${ffmpegCommandString}
 
-for filename in *.vtt; do
-  fname="\${filename%.*}"
-  ffmpeg -i "$filename" "$fname.srt"
-done
+${settings.convertSubtitles
+  ? `for file in *.vtt; do
+  filename="\${file%.*}"
+  ffmpeg -i "$file" "$filename.srt"
+done` : ''}
 
 find ./*.mp4 -delete
 

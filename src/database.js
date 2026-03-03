@@ -524,6 +524,9 @@ async function getAllSettings () {
     includeAudioTranscription: true,
     includeClearLanguage: true,
     includeSubtitles: true,
+    convertSubtitles: false,
+
+    movieSortOrder: 'date',
 
     enableImageCaching: true,
 
