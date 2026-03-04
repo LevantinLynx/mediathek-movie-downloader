@@ -90,19 +90,49 @@ async function scrape3satMovieData (cachedImageFileHashList) {
             }
             movieObject.preText = `Video verfügbar bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
           } else if (start) {
+            if (start > now) {
+              movieObject.time = {
+                date: start,
+                type: 'from'
+              }
+              movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
+            } else {
+              // Asume infinite availability
+              const date = new Date(`${now.getFullYear() + 50}-01-01T00:00:00.000+01:00`)
+              movieObject.time = {
+                date,
+                type: 'untill'
+              }
+              movieObject.preText = `Video verfügbar bis ${formatDate(date, 'dd.MM.yyyy HH:mm')}`
+            }
+          }
+        } else if (
+          movieApiData?.endDate &&
+          new Date(movieApiData.endDate) > now
+        ) {
+          const end = new Date(movieApiData.endDate)
+          movieObject.time = {
+            date: end,
+            type: 'untill'
+          }
+          movieObject.preText = `Video verfügbar bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
+        } else if (movieApiData.editorialDate) {
+          const start = new Date(movieApiData.editorialDate)
+          if (start > now) {
             movieObject.time = {
               date: start,
               type: 'from'
             }
             movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
+          } else {
+            // Asume infinite availability
+            const date = new Date(`${now.getFullYear() + 50}-01-01T00:00:00.000+01:00`)
+            movieObject.time = {
+              date,
+              type: 'untill'
+            }
+            movieObject.preText = `Video verfügbar bis ${formatDate(date, 'dd.MM.yyyy HH:mm')}`
           }
-        } else if (movieApiData.editorialDate) {
-          const start = new Date(movieApiData.editorialDate)
-          movieObject.time = {
-            date: start,
-            type: 'from'
-          }
-          movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
         }
 
         // if (streams.length > 0) {
