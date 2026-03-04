@@ -1,5 +1,5 @@
 const { serverEvents } = require('./server.js')
-const truncateUtf8Bytes = require('truncate-utf8-bytes')
+const sanitizeFilenames = require('./sanitizeFilenames.js')
 const userAgentArray = require('./userAgents.json')
 const iso639codes = require('./iso639Codes.json')
 const { getAllSettings } = require('./database.js')
@@ -79,22 +79,17 @@ function getCleanThumbnailUrl (thumbnailUrl) {
 
 function sanitizeFileAndDirNames (input) {
   if (typeof input !== 'string') throw new Error('Input must be string')
+  // ⧸
+  const unwantedTitleCharacters = /[«»：]/g
 
-  const unwantedTitleCharacters = /[«»：]/g // eslint-disable-line no-useless-escape
-  const illegalRe = /[\/\?<>\\:\*\|"]/g // eslint-disable-line no-useless-escape
-  const controlRe = /[\x00-\x1f\x80-\x9f]/g // eslint-disable-line no-control-regex
-  const reservedRe = /^\.+$/
-  const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i
-  const windowsTrailingRe = /[\. ]+$/ // eslint-disable-line no-useless-escape
-
-  const sanitized = input
+  const cleanTitle = input
+    .replace(/\//g, '⧸')
+    .replace('...', '…')
+    .replace(/[·–]/, '-')
     .replace(unwantedTitleCharacters, '')
-    .replace(illegalRe, '')
-    .replace(controlRe, '')
-    .replace(reservedRe, '')
-    .replace(windowsReservedRe, '')
-    .replace(windowsTrailingRe, '')
-  return truncateUtf8Bytes(sanitized, 255)
+    .trim()
+
+  return sanitizeFilenames(cleanTitle)
 }
 
 function getIso639Info (iso639Code1Or2) {
