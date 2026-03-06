@@ -11,7 +11,7 @@ async function getCachedMovieSuggestionsByMovieID (movieID) {
     let tmdbMovies = null
 
     if (movie) {
-      const cleanTitle = movie.title?.replace(/[()]/g, '').split(/[|I]/)?.[0]?.trim() || null
+      const cleanTitle = movie.title?.replace(/[()]/g, '').split(/[|]/)?.[0]?.trim() || null
       const imdbSuggestions = await db.getImdbSuggestionsForTitle(encodeURIComponent(cleanTitle || movie.title))
       if (imdbSuggestions?.length > 0) {
         imdbMovies = await Promise.all(imdbSuggestions.map(movieID => db.getImdbMovieByID(movieID)))
@@ -41,7 +41,7 @@ async function getMovieSuggestionsByMovieID (movieID) {
   try {
     const movie = await db.getMovieMetaDataByID(movieID)
     if (movie) {
-      movie.cleanTitle = movie.title?.replace(/[()]/g, '').split(/[|I]/)?.[0]?.trim() || null
+      movie.cleanTitle = movie.title?.replace(/[()]/g, '').split(/[|]/)?.[0]?.trim() || null
       return {
         movieID,
         tmdb: (
