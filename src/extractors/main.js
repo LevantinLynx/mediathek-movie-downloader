@@ -60,6 +60,18 @@ async function getAvailableMovieMetaDataFromApis () {
     logger.debug(`[META DATA] Data retrieval took ${doneTimestamp - startTimestamp} ms and found ${Object.keys(cache).length} movies.`)
     logger.debug(`[META DATA] Channels: ${_.uniq(Object.values(cache).map(movie => movie.channel)).sort()}`)
 
+    // Set date if date is implausible
+    const cacheKeys = Object.keys(cache)
+    const infiniteFallbackYear = new Date().getFullYear() + 50
+    for (const key of cacheKeys) {
+      if (
+        cache[key].time?.type === 'untill' &&
+        (!cache[key].time?.date || cache[key].time.date < 864_000)
+      ) {
+        cache[key].time.date = new Date(`${infiniteFallbackYear}-01-01T00:00:00.000Z`)
+      }
+    }
+
     isExtractionRunning = false
     return _.omitBy(cache, _.isNil)
   } catch (err) {
