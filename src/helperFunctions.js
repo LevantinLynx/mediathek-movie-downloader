@@ -127,7 +127,11 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
 
   if (cacheHashList[fileNameHash]) {
     logger.debug('[IMG CACHE] File is already cached!')
-    return path.join('/', 'cache', `${cacheHashList[fileNameHash]}`)
+    if (process.env.NODE_ENV === 'development') {
+      return process.env.DEV_BASE_URL + path.join('/', 'cache', `${cacheHashList[fileNameHash]}`)
+    } else {
+      return path.join('/', 'cache', `${cacheHashList[fileNameHash]}`)
+    }
   }
 
   try {
@@ -184,7 +188,11 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
 
     logger.debug('[IMG CACHE] DONE Caching:', url)
     await sleep(getRandomInteger(275, 555)) // avoid rate limiting while downloading images
-    return path.join('/', 'cache', `${fileNameHash}.${resizedFileExtention}`)
+    if (process.env.NODE_ENV === 'development') {
+      return process.env.DEV_BASE_URL + path.join('/', 'cache', `${fileNameHash}.${resizedFileExtention}`)
+    } else {
+      return path.join('/', 'cache', `${fileNameHash}.${resizedFileExtention}`)
+    }
   } catch (err) {
     logger.error(err)
   }
@@ -197,6 +205,9 @@ async function getArdImageData (urlObject) {
   // url https://api.ardmediathek.de/image-service/images/urn:ard:image:977f650cf04f4daf?ch=024db2775bd386aa&w={width}
   // poster 320 480 600 768 840 960 1280 1440 1600 1920 2560
   // landscape 320 480 600 768 840 960 1280 1440 1600 1920 2560
+
+  // ARD can't guarantee a thumbnail size ¯\_(ツ)_/¯
+  // so we just try a all known options ...
   try {
     const cleanUrl = `${urlObject.origin}${urlObject.pathname}`
     const searchParams = Object.fromEntries(urlObject.searchParams)
