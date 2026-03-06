@@ -443,7 +443,14 @@ async function getArdGroupParametersForYtdlp (movie) {
       for (let i = 0; i < rawAudioFormats.length; i++) {
         if (
           rawAudioFormats[i].language === lang &&
-          rawAudioFormats[i].height >= 360
+          rawAudioFormats[i].height >= 360 &&
+          rawAudioFormats[i].protocol === 'm3u8_native'
+        ) return rawAudioFormats[i]
+      }
+      for (let i = 0; i < rawAudioFormats.length; i++) {
+        if (
+          rawAudioFormats[i].language === lang &&
+          rawAudioFormats[i].height >= 540
         ) return rawAudioFormats[i]
       }
     }
