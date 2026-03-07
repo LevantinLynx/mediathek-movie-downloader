@@ -19,10 +19,10 @@ io.on('connection', async socket => {
   async function sendInitialData () {
     socket.emit('version', version)
     socket.emit('settingsUpdate', await db.getAllSettings())
-    socket.emit('scheduleUpdate', await db.getScheduleData())
-    socket.emit('finishedMoviesUpdate', await db.getFinishedMovies())
-    socket.emit('ignoreListUpdate', await db.getIgnoreList())
     socket.emit('downloadProgressUpdate', db.getDownloadsProgress())
+    socket.emit('scheduleUpdate', await db.getScheduleData())
+    socket.emit('ignoreListUpdate', await db.getIgnoreList())
+    socket.emit('doneListUpdate', await db.getFinishedMovies())
     socket.emit('availableMovieMetaDataUpdate', await db.getAvailableMovieMetaData())
     socket.emit('nextMetaDataUpdateDate', cron.metaDataUpdateJob.nextDate())
 
@@ -34,7 +34,6 @@ io.on('connection', async socket => {
     }
   }
 
-  sendInitialData()
   socket.on('getInitialData', () => sendInitialData())
 
   // Settings
