@@ -632,6 +632,9 @@ async function getAllSettings () {
   const entries = await db.settings.findAsync({})
 
   const defaults = {
+    omdbApiKeyExists: !!process.env.OMDB_API_KEY,
+    tmdbApiReadAccessTokenExists: !!process.env.TMDB_API_READ_ACCESS_TOKEN,
+
     maxDownloads: 3,
     maxDownloadRate: 1.5,
     maxDownloadRateUnit: 'M',
@@ -642,6 +645,8 @@ async function getAllSettings () {
     includeClearLanguage: true,
     includeSubtitles: true,
     convertSubtitles: false,
+
+    autoNavigateOnDownloadAndIgnore: false,
 
     movieSortOrder: 'date',
 
@@ -696,6 +701,8 @@ async function getAllSettings () {
   return defaults
 }
 async function updateSettings (settings) {
+  if (Object.hasOwnProperty.call(settings, 'omdbApiKeyExists')) delete settings.omdbApiKeyExists
+  if (Object.hasOwnProperty.call(settings, 'tmdbApiReadAccessTokenExists')) delete settings.tmdbApiReadAccessTokenExists
   db.settings.updateAsync({
     type: 'settings'
   }, {
