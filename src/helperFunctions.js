@@ -19,6 +19,13 @@ axiosWithTimeouts.interceptors.request.use((config) => {
   if (!config.signal) config.signal = AbortSignal.timeout(timeoutInMs)
   return config
 })
+axiosWithTimeouts.interceptors.response.use(
+  response => response,
+  error => {
+    logger.error('[Axios intercepted Error]', error.message, error.code)
+    return Promise.reject(error) // re-throw so try/catch sees it
+  }
+)
 
 const cacheDir = path.join(__dirname, '..', 'cache')
 fs.ensureDirSync(cacheDir)
