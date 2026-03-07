@@ -59,6 +59,8 @@ async function downloadMovie (movie) {
     movie.baseDownloadPath = path.join(__dirname, '..', 'downloads', sanitizeFileAndDirNames(movie.extraInfo.downloadTitle))
     logger.debug('[DOWNLAODER] baseDownloadPath', movie.baseDownloadPath)
 
+    await generateNfoFileForMovie(movie)
+
     // Download movie via yt-dlp
     await ytDlpDownloader(movie)
 
@@ -719,6 +721,85 @@ find . -size 0 -delete`
     path.join(movie.baseDownloadPath, `audio_rename_script_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.sh`),
     ffmpegAudioTitleString
   )
+}
+
+async function generateNfoFileForMovie (movie) {
+  try {
+    let nfoContent = '<?xml version="1.0" encoding="utf-8" standalone="yes"?>'
+    nfoContent += '\n<movie>'
+
+    if (movie.extraInfo.imdbid) nfoContent += `\n  <imdbid>${movie.extraInfo.imdbid}</imdbid>`
+    if (movie.extraInfo.tmdbid) nfoContent += `\n  <tmdbid>${movie.extraInfo.tmdbid}</tmdbid>`
+    if (movie.extraInfo.title) nfoContent += `\n  <title>${movie.extraInfo.title}</title>`
+    if (movie.extraInfo.originalTitle) nfoContent += `\n  <originaltitle>${movie.extraInfo.originalTitle}</originaltitle>`
+    if (movie.extraInfo.year) nfoContent += `\n  <year>${movie.extraInfo.year}</year>`
+    if (movie.extraInfo.plot) nfoContent += `\n  <plot>${movie.extraInfo.plot}</plot>`
+    if (movie.extraInfo.runtime) nfoContent += `\n  <runtime>${movie.extraInfo.runtime}</runtime>`
+    if (movie.extraInfo.release) {
+      const isDateFormated = /\d{4}-\d{2}-\d{2}/.test(movie.extraInfo.release)
+      let date = ''
+      if (isDateFormated) date = movie.extraInfo.release
+      else {
+        if (/\d{2}\.\d{2}\.\d{4}/.test(movie.extraInfo.release)) {
+          date = formatDate(parseDate(movie.extraInfo.release, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd')
+        }
+        // Fallback leave as is
+        date = movie.extraInfo.release
+      }
+      nfoContent += `\n  <releasedate>${date}</releasedate>`
+      nfoContent += `\n  <premiered>${date}</premiered>`
+    }
+
+    for (let i = 0; i < movie.extraInfo.genres.length; i++) {
+      nfoContent += `\n  <genre>${movie.extraInfo.genres[i]}</genre>`
+    }
+    for (let i = 0; i < movie.extraInfo.actors.length; i++) {
+      nfoContent += '\n  <actor>'
+      nfoContent += `\n    <name>${movie.extraInfo.actors[i]}</name>`
+      nfoContent += `\n    <order>${i}</order>`
+      nfoContent += '\n  </actor>'
+    }
+    for (let i = 0; i < movie.extraInfo.director.length; i++) {
+      nfoContent += `\n  <director>${movie.extraInfo.director[i]}</director>`
+    }
+    for (let i = 0; i < movie.extraInfo.writer.length; i++) {
+      nfoContent += `\n  <credits>${movie.extraInfo.writer[i]}</credits>`
+    }
+
+    const ratingKeys = Object.keys(movie.extraInfo.ratings || {})
+    if (ratingKeys.length > 0) {
+      nfoContent += '\n  <ratings>'
+
+      if (ratingKeys.indexOf('imdb') > -1) {
+        nfoContent += `\n    <rating name="imdb" max="10"${ratingKeys[0] === 'imdb' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${movie.extraInfo.ratings.imdb}</value>`
+        nfoContent += '\n    </rating>'
+      }
+      if (ratingKeys.indexOf('tmdb') > -1) {
+        nfoContent += `\n    <rating name="tmdb" max="10"${ratingKeys[0] === 'tmdb' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${movie.extraInfo.ratings.tmdb}</value>`
+        nfoContent += '\n    </rating>'
+      }
+      if (ratingKeys.indexOf('metacritic') > -1) {
+        nfoContent += `\n    <rating name="metacritic" max="100"${ratingKeys[0] === 'metacritic' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${movie.extraInfo.ratings.metacritic}</value>`
+        nfoContent += '\n    </rating>'
+      }
+      if (ratingKeys.indexOf('rotten') > -1) {
+        nfoContent += `\n    <rating name="rottentomatoes" max="100"${ratingKeys[0] === 'rotten' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${parseInt(movie.extraInfo.ratings.rotten)}</value>`
+        nfoContent += '\n    </rating>'
+      }
+
+      nfoContent += '\n  </ratings>'
+    }
+
+    nfoContent += '\n</movie>'
+
+    await Bun.write(path.join(movie.baseDownloadPath, 'movie.nfo'), nfoContent)
+  } catch (err) {
+    logger.error('[DOWNLAODER] Error while creating movie.nfo …', err.message)
+  }
 }
 
 module.exports = {
