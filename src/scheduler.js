@@ -34,9 +34,20 @@ function getScheduleDates (movie) {
     else if (movie.restrictions?.indexOf('FSK18') > -1) schedule.push(new Date(`${formatDate(new Date(), 'yyyy-MM-dd')}T23:10:00.000`))
     else schedule.push(new Date())
 
-    schedule.push(addHours(schedule[0], 1))
-    schedule.push(addHours(schedule[0], 2))
-    schedule.push(addDays(schedule[0], 2))
+    const originalDate = schedule[0]
+    const datePlusOneHours = addHours(originalDate, 1)
+    const datePlusTwoHours = addHours(originalDate, 2)
+
+    schedule.push(datePlusOneHours)
+    schedule.push(datePlusTwoHours)
+
+    schedule.push(addDays(originalDate, 1))
+    schedule.push(addDays(datePlusOneHours, 1))
+    schedule.push(addDays(datePlusTwoHours, 1))
+
+    schedule.push(addDays(originalDate, 2))
+    schedule.push(addDays(datePlusOneHours, 2))
+    schedule.push(addDays(datePlusTwoHours, 2))
 
     return schedule
   }
