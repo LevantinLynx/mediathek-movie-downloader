@@ -32,7 +32,10 @@ async function getImdbSuggestionsForTitle (title) {
     }
 
     for (let i = 0; i < suggestions.length; i++) {
-      const omdbInfo = await getOmdbInfoByTitleOrImdbID(suggestions[i].imdbid)
+      let omdbInfo = null
+      if (process.env.OMDB_API_KEY) {
+        omdbInfo = await getOmdbInfoByTitleOrImdbID(suggestions[i].imdbid)
+      }
 
       if (omdbInfo) {
         if (!suggestions[i].ratings) suggestions[i].ratings = {}
@@ -212,6 +215,76 @@ function getSuggestionsFromHtml (websiteHtml) {
   }
 }
 
+async function getFallbackImdbInfoForId (imdbid) {
+  let movieObject = null
+  try {
+    const suggestionArray = await getImdbSuggestionsForTitleByApi(imdbid)
+    movieObject = suggestionArray.filter(entry => entry.imdbid === imdbid)[0]
+
+    try {
+      const { data: websiteHtml } = await axios.get(`https://www.imdb.com/de/title/${imdbid}/`, {
+        headers: {
+          'User-Agent': getRandomUserAgent(),
+          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'accept-language': 'de-DE,de;q=0.6',
+          'cache-control': 'no-cache',
+          pragma: 'no-cache',
+          priority: 'u=0, i',
+          'sec-ch-ua': '"Not:A-Brand";v="99", "Brave";v="145", "Chromium";v="145"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Linux"',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'same-origin',
+          'sec-fetch-user': '?1',
+          'sec-gpc': '1',
+          'upgrade-insecure-requests': '1',
+          cookie: 'lc-main=de_DE'
+        },
+        referrer: `https://www.imdb.com/title/${imdbid}/?ref_=nv_sr_srsg_0_tt_3_nm_0_in_0_q_${imdbid}`,
+        signal: AbortSignal.timeout(8_000)
+      })
+
+      const { document: websiteAsElement } = parseHTML(websiteHtml)
+      const infoJsonString = websiteAsElement.querySelector('script[type="application/ld+json"]').innerHTML
+      const info = JSON.parse(infoJsonString)
+
+      if (info.alternateName) movieObject.title = info.alternateName
+      else if (info.name) movieObject.title = info.name
+
+      if (info.description) movieObject.description = info.description
+      if (info.genre?.length > 0) movieObject.genres = info.genre
+      if (info.aggregateRating?.ratingValue) movieObject.ratings = { imdb: `${info.aggregateRating.ratingValue}` }
+
+      if (info.actor?.length > 0) {
+        movieObject.actors = []
+        for (let i = 0; i < info.actor.length; i++) {
+          if (info.actor[i]['@type'] === 'Person') {
+            movieObject.actors.push(info.actor[i].name)
+          }
+        }
+      }
+      if (info.director?.length > 0) {
+        movieObject.director = []
+        for (let i = 0; i < info.director.length; i++) {
+          if (info.director[i]['@type'] === 'Person') {
+            movieObject.director.push(info.director[i].name)
+          }
+        }
+      }
+    } catch (e) {
+      logger.error(e)
+    }
+
+    return movieObject
+  } catch (err) {
+    logger.error('[MATCHER] UMDB ERROR', err.message)
+    if (err.message !== 'canceled') logger.error(err)
+    return null
+  }
+}
+
 module.exports = {
-  getImdbSuggestionsForTitle
+  getImdbSuggestionsForTitle,
+  getFallbackImdbInfoForId
 }

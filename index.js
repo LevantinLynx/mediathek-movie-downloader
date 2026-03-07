@@ -71,13 +71,13 @@ io.on('connection', async socket => {
   })
 
   // Schedule
-  socket.on('scheduleDownloadByMovieID', async (movieID) => {
-    const status = await scheduleDownloadByMovieID(movieID)
+  socket.on('scheduleDownloadByMovieID', async (info) => {
+    const status = await scheduleDownloadByMovieID(info)
     if (status.ok) {
       io.emit('scheduleUpdate', await db.getScheduleData())
       sendNotificationToClients({
         result: 'success',
-        msg: `Download für "${status.title || movieID}" geplant.`,
+        msg: `Download für "${status.title || info.movieID}" geplant.`,
         time: 5000
       })
     }
@@ -85,7 +85,7 @@ io.on('connection', async socket => {
   socket.on('removeDownloadFromSchedule', movieID => db.deleteScheduleEntry(movieID))
 
   // Finished Downloads list
-  socket.on('removeEntryFromFinished', movieID => db.deleteFinishedEntry(movieID))
+  socket.on('removeEntryFromDoneList', movieID => db.deleteFinishedEntry(movieID))
 
   // Ignore list
   socket.on('addEntryToIgnoreList', async movieID => {
@@ -205,8 +205,8 @@ db.events.on('settingsUpdate', async () => {
   io.emit('settingsUpdate', await db.getAllSettings())
 })
 
-db.events.on('finishedMoviesUpdate', async () => {
-  io.emit('finishedMoviesUpdate', await db.getFinishedMovies())
+db.events.on('doneListUpdate', async () => {
+  io.emit('doneListUpdate', await db.getFinishedMovies())
 })
 
 db.events.on('ignoreListUpdate', async (err) => {
@@ -222,7 +222,7 @@ serverEvents.on('startDownloadProgressJob', () => {
 })
 serverEvents.on('stopDownloadProgressJob', async () => {
   await sleep(1500)
-  if (await db.getScheduleEntryInProgressCount() === 0 && cron.downloadProgressJob.running) {
+  if (await db.getScheduleEntryInProgressCount() === 0 && cron.downloadProgressJob.isActive) {
     cron.downloadProgressJob.stop()
     logger.debug('[CRON] downloadProgressJob stopped …')
   }

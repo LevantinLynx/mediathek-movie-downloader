@@ -59,14 +59,14 @@ async function getMovieMetaDataByID (movieID) {
   return movieMetaData?.[0]?.data?.[movieID] || null
 }
 
-function updateAvailableMovieMetaData (availableMovieMetaDataArray) {
-  if (Object.keys(availableMovieMetaDataArray)?.length > 0) {
+function updateAvailableMovieMetaData (availableMovieMetaDataObject) {
+  if (Object.keys(availableMovieMetaDataObject)?.length > 0) {
     db.metaData.updateAsync({
       type: 'availableMovieMetaData'
     }, {
       $set: {
         type: 'availableMovieMetaData',
-        data: availableMovieMetaDataArray
+        data: availableMovieMetaDataObject
       }
     }, {
       upsert: true
@@ -74,7 +74,7 @@ function updateAvailableMovieMetaData (availableMovieMetaDataArray) {
     events.emit('availableMovieMetaDataUpdate')
     logger.debug('[DB] DONE: updateAvailableMovieMetaData')
   } else {
-    logger.info('[DB] updateAvailableMovieMetaData: No or empty array provided on update!')
+    logger.info('[DB] updateAvailableMovieMetaData: No or empty object provided on update!')
   }
 }
 
@@ -152,23 +152,23 @@ async function addScheduleEntry (movie) {
   }
 }
 
-async function setScheduleEntryInProgress (entry, status = false, failCount) {
-  if (entry && entry.apiID) {
+async function setScheduleEntryInProgress (movie, status = false, failCount) {
+  if (movie && movie.id) {
     const updateObject = { inProgress: status }
     if (failCount) updateObject.failCount = failCount
-    if (failCount > entry.scheduleDates.length - 1) updateObject.failed = true
+    if (failCount > movie.scheduleDates.length - 1) updateObject.failed = true
 
     db.schedule.updateAsync({
-      apiID: entry.apiID
+      id: movie.id
     }, {
       $set: updateObject
     }, {
       upsert: false
     })
     events.emit('scheduleUpdate')
-    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${entry.apiID}" in progress "${status}"`)
+    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${movie.id}" in progress "${status}"`)
   } else {
-    logger.info('[DB] SCHEDULE UPDATE: No valid entry provided.')
+    logger.info('[DB] SCHEDULE UPDATE: No valid entry provided.', movie, status, failCount)
   }
 }
 
@@ -210,7 +210,7 @@ async function setFinishedMovieState (movie) {
   }, {
     upsert: true
   })
-  events.emit('finishedMoviesUpdate')
+  events.emit('doneListUpdate')
 }
 
 async function getFinishedMovies () {
@@ -228,9 +228,9 @@ async function deleteFinishedEntry (movieID) {
   db.doneAndIgnore.remove({ id: movieID, type: 'done' }, {}, err => {
     if (err) {
       logger.error(err)
-      events.emit('finishedMoviesUpdate', { error: 'Error while deleting done entry.', movieID })
+      events.emit('doneListUpdate', { error: 'Error while deleting done entry.', movieID })
     } else {
-      events.emit('finishedMoviesUpdate')
+      events.emit('doneListUpdate')
     }
   })
 }
@@ -243,7 +243,7 @@ async function getIgnoreList () {
         delete movie._id
         return movie
       }),
-      ['title']
+      ['date']
     )
   } catch (err) {
     logger.error(err)
@@ -293,10 +293,10 @@ function getDownloadsProgress () {
   return db.cache.downloadsInProgress
 }
 function updateDownloadProgressEntry (progress) {
-  db.cache.downloadsInProgress[progress.apiID] = progress
+  db.cache.downloadsInProgress[progress.id] = progress
 }
-function deleteDownloadProgressCacheEntry (apiID) {
-  if (db.cache.downloadsInProgress[apiID]) delete db.cache.downloadsInProgress[apiID]
+function deleteDownloadProgressCacheEntry (movieID) {
+  if (db.cache.downloadsInProgress[movieID]) delete db.cache.downloadsInProgress[movieID]
 }
 
 // /////////////// //
@@ -527,6 +527,8 @@ async function getAllSettings () {
     convertSubtitles: false,
 
     movieSortOrder: 'date',
+
+    fileAndFolderNaming: 'jellyfin',
 
     enableImageCaching: true,
 

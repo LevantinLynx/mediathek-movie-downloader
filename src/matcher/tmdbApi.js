@@ -122,7 +122,7 @@ async function getTmdbApiSuggestionsForTitle (title) {
 async function getPlatformMatchingInfo (tmdbOrImdbID) {
   let match = null
   if (!process.env.TMDB_API_READ_ACCESS_TOKEN) {
-    logger.debug('[MATCHER] OMDB No API Key found skipping!')
+    logger.debug('[MATCHER] TMDB No API Read Access Token found skipping!')
     return match
   }
 
@@ -156,6 +156,81 @@ async function getPlatformMatchingInfo (tmdbOrImdbID) {
   return match
 }
 
+async function getTmdbMovieInfoByID (tmdbid) {
+  let entry = null
+  if (!process.env.TMDB_API_READ_ACCESS_TOKEN) {
+    logger.debug('[MATCHER] TMDB No API Read Access Token found skipping!')
+    return null
+  }
+
+  try {
+    const cachedMovieData = await db.getTmdbMovieByID(tmdbid)
+    if (cachedMovieData) return cachedMovieData
+
+    const { data: result } = await axios.get(`https://api.themoviedb.org/3/movie/${tmdbid}?append_to_response=external_ids&language=de-DE`, {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_READ_ACCESS_TOKEN}`,
+        Accept: 'application/json'
+      },
+      signal: AbortSignal.timeout(TMDB_API_REQUEST_TIMEOUT)
+    })
+
+    entry = {
+      tmdbid: `${result.id}`.split('-')[0],
+      title: result.title,
+      genres: _.compact(result.genre_ids.map(item => genres[item])),
+      ratings: {
+        tmdb: result.vote_average.toFixed(1)
+      },
+      releaseDate: result.release_date,
+      year: result.release_date.split('-')?.[0],
+      info: result.overview,
+      originalLanguage: result.original_language
+    }
+
+    if (result.poster_path) entry.img = `https://image.tmdb.org/t/p/w200${result.poster_path}`
+    if (result.backdrop_path) entry.backdrop = `https://image.tmdb.org/t/p/w1280${result.backdrop_path}`
+    if (result.title !== result.original_title) entry.originalTitle = result.original_title
+    if (result?.external_ids?.imdb_id) entry.imdbid = result.external_ids.imdb_id
+
+    if (entry.imdbid) {
+      const omdbInfo = await getOmdbInfoByTitleOrImdbID(entry.imdbid)
+      if (omdbInfo) {
+        if (!entry.ratings) entry.ratings = {}
+        if (omdbInfo.Runtime && omdbInfo.Runtime === 'N/A') entry.duration = omdbInfo.Runtime
+        if (omdbInfo.Rated && ['N/A', 'Not Rated'].indexOf(omdbInfo.Rated) === -1) {
+          entry.fsk = omdbInfo.Rated
+        }
+        if (omdbInfo.Actors) entry.actors = omdbInfo.Actors.split(', ')
+        if (!entry.img && omdbInfo.Poster) entry.img = omdbInfo.Poster
+        if (omdbInfo.Metascore && omdbInfo.Metascore !== 'N/A') {
+          entry.ratings.metacritic = omdbInfo.Metascore
+        }
+        if (omdbInfo.imdbRating && omdbInfo.imdbRating !== 'N/A') {
+          entry.ratings.imdb = omdbInfo.imdbRating
+        }
+        if (omdbInfo.Ratings) {
+          const rotten = omdbInfo.Ratings.filter(item => item.Source === 'Rotten Tomatoes')
+          if (rotten.length > 0) entry.ratings.rotten = rotten[0].Value
+        }
+
+        if (Object.keys(entry.ratings).length === 0) delete entry.ratings
+      }
+    }
+
+    if (entry.img === 'N/A') entry.img = null
+    if (entry.duration === 'N/A') entry.duration = null
+
+    await db.saveTmdbMovie(entry)
+
+    return entry
+  } catch (err) {
+    logger.error('[MATCHER] TMDB API movie by ID request:', err.message)
+    if (err.message !== 'canceled') logger.error(err)
+    return entry
+  }
+}
+
 const genres = {
   28: 'Action',
   12: 'Abenteuer',
@@ -180,5 +255,6 @@ const genres = {
 
 module.exports = {
   getTmdbApiSuggestionsForTitle,
-  getPlatformMatchingInfo
+  getPlatformMatchingInfo,
+  getTmdbMovieInfoByID
 }

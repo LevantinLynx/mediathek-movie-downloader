@@ -2,6 +2,7 @@ const logger = require('./logger.js')
 const { Glob, $ } = require('bun')
 const fs = require('fs-extra')
 const path = require('path')
+const { sanitizeFileAndDirNames } = require('./helperFunctions.js')
 
 const glob = new Glob('*')
 const partialDownloadFile = new Glob('*.part*')
@@ -27,11 +28,7 @@ async function downloadPostProcessing (movie) {
       logger.debug(`[POSTPROCESSING] Deleting partial download file: "${file}"`)
       Bun.file(path.join(movie.baseDownloadPath, file)).delete()
     } else {
-      let cleanFileName = file.replace(/ \[.+\]/, '')
-
-      // Special name detection
-      const specialNameMatch = file.match(/«(.+)»/)
-      if (specialNameMatch) cleanFileName = specialNameMatch[1]
+      const cleanFileName = sanitizeFileAndDirNames(file)
 
       // Rename file
       if (cleanFileName !== file) {
@@ -60,10 +57,6 @@ async function downloadPostProcessing (movie) {
       } else if (subtitleFile.match(file)) {
         logger.debug('[POSTPROCESSING] Subtitle file detected')
         if (movie.title.indexOf('.') === -1) {
-          const parts = file.split('.')
-          parts.shift()
-          const cleanFileName = `${movie.title}.${parts.join('.')}`
-
           if (file !== cleanFileName) {
             logger.debug(`[POSTPROCESSING] Renaming subtitle "${file}" to "${cleanFileName}"…`)
             await fs.move(
@@ -82,6 +75,7 @@ async function downloadPostProcessing (movie) {
       await $`chmod +x ${path.join(movie.baseDownloadPath, shellScriptFileName)}`.quiet()
       await $`/bin/sh ${path.join(movie.baseDownloadPath, shellScriptFileName)}`.quiet()
       await $`rm ${path.join(movie.baseDownloadPath, shellScriptFileName)}`.quiet()
+      logger.debug(`[POSTPROCESSING] DONE! Running script "${shellScriptFileName}"`)
     } catch (err) {
       logger.error(`Error while executing script: ${shellScriptFileName} ${err.exitCode}`)
       logger.error('stdout', err.stdout.toString())

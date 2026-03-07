@@ -55,9 +55,15 @@ async function getTmdbSuggestionsForTitle (title) {
     logger.debug('[MATCHER] TMDB Suggestions:', suggestions?.length)
     return suggestions
   } catch (err) {
-    logger.error('[MATCHER] TMDB Search request:', err.message)
-    logger.error(err)
-    return []
+    if (
+      err.message !== 'canceled' ||
+      err.status === 503
+    ) {
+      logger.error('[MATCHER] TMDB Search request:', err.message)
+    } else {
+      logger.error('[MATCHER] TMDB Search request:', err)
+    }
+    return null
   }
 }
 
@@ -99,6 +105,66 @@ async function getSuggestionsFromHtml (websiteHtml) {
   }
 }
 
+async function getFallbackTmdbInfoForId (tmdbid) {
+  const movieObject = {}
+  try {
+    const { data: websiteHtml } = await axios.get(`https://www.themoviedb.org/movie/${tmdbid}?language=de-DE`, {
+      headers: {
+        'User-Agent': getRandomUserAgent(),
+        accept: 'text/html,application/xhtml+xml,application/xmlq=0.9,image/avif,image/webp,image/apng,*/*q=0.8',
+        'accept-language': 'en-US,enq=0.8',
+        priority: 'u=0, i',
+        'sec-ch-ua': '"Not:A-Brand"v="99", "Brave"v="145", "Chromium"v="145"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Linux"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1',
+        'sec-gpc': '1',
+        'upgrade-insecure-requests': '1',
+        cookie: 'AWSALBAPP-1=_remove_ AWSALBAPP-2=_remove_ AWSALBAPP-3=_remove_ preferences=%7B%22adult%22%3Afalse%2C%22i18n_fallback_language%22%3A%22en-US%22%2C%22locale%22%3A%22de-DE%22%2C%22country_code%22%3A%22DE%22%2C%22timezone%22%3A%22Europe%2FBerlin%22%7D',
+        Referer: 'https://www.themoviedb.org/'
+      }
+    })
+
+    const { document: websiteAsElement } = parseHTML(websiteHtml)
+    const infoJsonString = websiteAsElement.querySelector('script[type="application/ld+json"]').innerHTML
+    const infoJsonArray = infoJsonString.split('\n')
+
+    let info = {}
+    for (let i = 0; i < infoJsonArray.length; i++) {
+      if (infoJsonArray[i].indexOf('{"@') === 0) {
+        info = JSON.parse(infoJsonArray[i])
+        break
+      }
+    }
+
+    const year = websiteAsElement.querySelector('head title')?.innerHTML?.match(/\((\d{4})\)/)
+    if (year?.[1]) movieObject.year = year[1]
+
+    if (info.alternateName) movieObject.title = info.alternateName
+    else if (info.name) movieObject.title = info.name
+
+    if (info.description) movieObject.info = info.description
+    if (info.genre?.length > 0) movieObject.genres = info.genre
+    if (info.aggregateRating?.ratingValue) movieObject.ratings = { tmdb: info.aggregateRating.ratingValue.toFixed(1) }
+
+    return movieObject
+  } catch (err) {
+    if (
+      err.message !== 'canceled' ||
+      err.status === 503
+    ) {
+      logger.error('[MATCHER] TMDB Fallback request:', err.message)
+    } else {
+      logger.error('[MATCHER] TMDB Fallback request:', err)
+    }
+    return null
+  }
+}
+
 module.exports = {
-  getTmdbSuggestionsForTitle
+  getTmdbSuggestionsForTitle,
+  getFallbackTmdbInfoForId
 }

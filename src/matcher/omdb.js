@@ -81,6 +81,9 @@ async function getOmdbInfoByImdbID (imdbid) {
       return null
     }
 
+    const cacheInfo = await getOmdbInfoFromDB(imdbid)
+    if (cacheInfo) return cacheInfo
+
     const { data } = await axios.get(`https://www.omdbapi.com/?i=${imdbid}&apikey=${process.env.OMDB_API_KEY}`, {
       signal: AbortSignal.timeout(OMDB_REQUEST_TIMOUT_IN_MS)
     })
@@ -102,5 +105,6 @@ async function getOmdbInfoByImdbID (imdbid) {
 }
 
 module.exports = {
-  getOmdbInfoByTitleOrImdbID
+  getOmdbInfoByTitleOrImdbID,
+  getOmdbInfoByImdbID
 }
