@@ -1,6 +1,6 @@
 FROM oven/bun:1-alpine AS development
 
-RUN apk add --no-cache tzdata python3 py3-pycryptodomex ffmpeg
+RUN apk add --no-cache tzdata python3 py3-pycryptodomex ffmpeg tmux
 
 USER bun
 WORKDIR /usr/src/app
@@ -8,4 +8,5 @@ WORKDIR /usr/src/app
 ENV NODE_ENV=development
 
 EXPOSE 12345
+EXPOSE 5173
 CMD [ "/bin/sh" ]

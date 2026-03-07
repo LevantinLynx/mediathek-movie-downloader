@@ -7,7 +7,7 @@
   "scripts": {
     "start": "bun index.js",
     "dev": "NODE_ENV=development bun index.js",
-    "test": "standard \"index.js\" \"src/**/*.js\" \"www/splash-screen.js\" --fix --verbose | snazzy"
+    "test": "standard \"index.js\" \"src/**/*.js\" --fix --verbose | snazzy"
   },
   "devDependencies": {
     "snazzy": "^9.0.0",
