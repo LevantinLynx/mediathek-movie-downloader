@@ -5,7 +5,8 @@ const arteExtractor = require('./arte.js')
 const dreisatExtractor = require('./dreisat.js')
 const { getAllSettings } = require('../database.js')
 const {
-  sendNotificationToClients
+  sendNotificationToClients,
+  generateIdFromApiID
 } = require('../helperFunctions.js')
 const path = require('path')
 const fs = require('fs-extra')
@@ -78,14 +79,6 @@ async function getAvailableMovieMetaDataFromApis () {
     isExtractionRunning = false
     throw err
   }
-}
-
-function generateIdFromApiID (apiID) {
-  return new Bun
-    .CryptoHasher('sha1')
-    .update(apiID)
-    .digest('hex')
-    .substring(0, 10)
 }
 
 /**

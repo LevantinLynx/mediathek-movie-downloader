@@ -493,6 +493,14 @@ function getFileExtention (headers) {
   return fileExtention
 }
 
+function generateIdFromApiID (apiID) {
+  return new Bun
+    .CryptoHasher('sha1')
+    .update(apiID)
+    .digest('hex')
+    .substring(0, 10)
+}
+
 module.exports = {
   sendNotificationToClients,
   sanitizeFileAndDirNames,
@@ -503,6 +511,7 @@ module.exports = {
   sleep,
   getIso639Info,
   cacheImageAndGenerateCachedLink,
+  generateIdFromApiID,
 
   axiosWithTimeouts
 }

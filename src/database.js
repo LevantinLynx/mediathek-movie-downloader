@@ -16,8 +16,8 @@ async function initialize () {
   try {
     // Initialize all databases
     logger.info('[DB] Initializing databases...')
-    db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule.db'), autoload: true })
-    db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
+    db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule_v2.db'), autoload: true })
+    db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData_v2.db'), autoload: true })
     db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
     db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
 
@@ -42,6 +42,123 @@ async function initialize () {
       }
     }
     logger.info('[DB] Done resetting lingering progress entries.')
+
+    // ///////////////////////////////////////////////// //
+    // Temporary database migration checks and functions //
+    // ///////////////////////////////////////////////// //
+    logger.info('[DB] Migration check …')
+    if (await Bun.file(path.join(databaseDirPath, 'done.db')).exists()) {
+      logger.info('[DB] Migrating done downloads …')
+      try {
+        const doneDB = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
+        const oldEntries = await doneDB.findAsync({})
+        const convertedEntries = oldEntries.map(movie => {
+          movie.id = generateIdFromApiID(movie.apiID)
+          movie.originalDate = movie.date
+          return movie
+        })
+
+        for (let i = 0; i < convertedEntries.length; i++) {
+          await setFinishedMovieState(convertedEntries[i])
+        }
+
+        logger.info('[DB] Migration of done downloads successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'done.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'done.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    if (await Bun.file(path.join(databaseDirPath, 'ignore.db')).exists()) {
+      logger.info('[DB] Migrating ignored movies …')
+      try {
+        const ignoreDB = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
+        const oldEntries = await ignoreDB.findAsync({})
+        const convertedEntries = oldEntries.map(movie => {
+          movie.id = generateIdFromApiID(movie.apiID)
+          movie.originalDate = movie.date
+          return movie
+        })
+
+        for (let i = 0; i < convertedEntries.length; i++) {
+          await addMovieToIgnoreList(convertedEntries[i])
+        }
+
+        logger.info('[DB] Migration of ignored movies successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'ignore.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'ignore.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    if (await Bun.file(path.join(databaseDirPath, 'metaData.db')).exists()) {
+      logger.info('[DB] Migrating meta data …')
+      try {
+        const metaDB = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
+        const oldEntries = await metaDB.findAsync({})
+        const convertedEntries = {}
+        const channels = oldEntries[0].data
+
+        for (let i = 0; i < channels.length; i++) {
+          const { movies, channel } = channels[i]
+          for (let j = 0; j < movies.length; j++) {
+            const movie = movies[j]
+            if (movie.img.indexOf('cache/') === 0) movie.img = '/' + movie.img
+            movie.id = generateIdFromApiID(movie.apiID)
+            movie.channel = channel
+            delete movie.apiID
+            if (movie.imgCover) delete movie.imgCover
+
+            convertedEntries[movie.id] = movie
+          }
+        }
+
+        await updateAvailableMovieMetaData(convertedEntries)
+
+        logger.info('[DB] Migration of meta data successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'metaData.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'metaData.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    if (await Bun.file(path.join(databaseDirPath, 'schedule.db')).exists()) {
+      logger.info('[DB] Migrating scheduled movies …')
+      try {
+        const scheduleDB = await new Datastore({ filename: path.join(databaseDirPath, 'schedule.db'), autoload: true })
+        const oldEntries = await scheduleDB.findAsync({})
+        const convertedEntries = oldEntries.map(movie => {
+          return {
+            movieID: generateIdFromApiID(movie.apiID),
+            title: movie.title,
+            channel: movie.channel
+          }
+        })
+
+        const { scheduleDownloadByMovieID } = require('./scheduler.js')
+        for (let i = 0; i < convertedEntries.length; i++) {
+          await scheduleDownloadByMovieID(convertedEntries[i])
+        }
+
+        logger.info('[DB] Migration of scheduled movies successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'schedule.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'schedule.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    function generateIdFromApiID (apiID) {
+      return new Bun
+        .CryptoHasher('sha1')
+        .update(apiID)
+        .digest('hex')
+        .substring(0, 10)
+    }
+    logger.info('[DB] Done checking for database migration.')
   } catch (err) {
     logger.error('[DB] initialize', err)
   }
@@ -205,7 +322,7 @@ async function setFinishedMovieState (movie) {
       title: movie.title,
       channel: movie.channel,
       type: 'done',
-      date: new Date()
+      date: movie.originalDate || new Date()
     }
   }, {
     upsert: true
