@@ -1,13 +1,13 @@
 {
   "name": "mediathek-movie-downloader",
-  "version": "2026.2.8-hotfix",
+  "version": "2026.3.8",
   "main": "index.js",
   "license": "MIT",
   "private": true,
   "scripts": {
     "start": "bun index.js",
     "dev": "NODE_ENV=development bun index.js",
-    "test": "standard \"index.js\" \"src/**/*.js\" \"www/splash-screen.js\" --fix --verbose | snazzy"
+    "test": "standard \"index.js\" \"src/**/*.js\" --fix --verbose | snazzy"
   },
   "devDependencies": {
     "snazzy": "^9.0.0",
@@ -22,9 +22,9 @@
     "fs-extra": "^11.3.3",
     "linkedom": "^0.18.12",
     "lodash": "^4.17.21",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
-    "truncate-utf8-bytes": "^1.0.2",
-    "yt-dlp-wrap": "^2.3.12"
+    "truncate-utf8-bytes": "^1.0.2"
   },
   "standard": {
     "globals": [

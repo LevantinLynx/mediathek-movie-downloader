@@ -13,24 +13,155 @@ const db = {
   }
 }
 async function initialize () {
-  // Initialize all databases
-  logger.info('[DB] Initializing databases...')
-  db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule.db'), autoload: true })
-  db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
-  db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
-  db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
-  db.ignore = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
-  db.done = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
-  logger.info('[DB] Done initializing databases.')
+  try {
+    // Initialize all databases
+    logger.info('[DB] Initializing databases...')
+    db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule_v2.db'), autoload: true })
+    db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData_v2.db'), autoload: true })
+    db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
+    db.settings = await new Datastore({ filename: path.join(databaseDirPath, 'settings.db'), autoload: true })
 
-  logger.info('[DB] Resetting lingering progress entries.')
-  const scheduleItems = await getScheduleData()
-  for (let i = 0; i < scheduleItems.length; i++) {
-    if (scheduleItems[i].inProgress) {
-      await setScheduleEntryInProgress(scheduleItems[i], false)
+    db.doneAndIgnore = await new Datastore({ filename: path.join(databaseDirPath, 'doneAndIgnore.db'), autoload: true })
+
+    db.imdbMovies = await new Datastore({ filename: path.join(databaseDirPath, 'imdbMovies.db'), autoload: true })
+    db.imdbSuggestions = await new Datastore({ filename: path.join(databaseDirPath, 'imdbSuggestions.db'), autoload: true })
+
+    db.tmdbMovies = await new Datastore({ filename: path.join(databaseDirPath, 'tmdbMovies.db'), autoload: true })
+    db.tmdbSuggestions = await new Datastore({ filename: path.join(databaseDirPath, 'tmdbSuggestions.db'), autoload: true })
+
+    db.platformMatchingInfo = await new Datastore({ filename: path.join(databaseDirPath, 'platformMatchingInfo.db'), autoload: true })
+
+    db.omdb = await new Datastore({ filename: path.join(databaseDirPath, 'omdb.db'), autoload: true })
+    logger.info('[DB] Done initializing databases.')
+
+    logger.info('[DB] Resetting lingering progress entries.')
+    const scheduleItems = await getScheduleData()
+    for (let i = 0; i < scheduleItems.length; i++) {
+      if (scheduleItems[i].inProgress) {
+        await setScheduleEntryInProgress(scheduleItems[i], false)
+      }
     }
+    logger.info('[DB] Done resetting lingering progress entries.')
+
+    // ///////////////////////////////////////////////// //
+    // Temporary database migration checks and functions //
+    // ///////////////////////////////////////////////// //
+    logger.info('[DB] Migration check …')
+    if (await Bun.file(path.join(databaseDirPath, 'done.db')).exists()) {
+      logger.info('[DB] Migrating done downloads …')
+      try {
+        const doneDB = await new Datastore({ filename: path.join(databaseDirPath, 'done.db'), autoload: true })
+        const oldEntries = await doneDB.findAsync({})
+        const convertedEntries = oldEntries.map(movie => {
+          movie.id = generateIdFromApiID(movie.apiID)
+          movie.originalDate = movie.date
+          return movie
+        })
+
+        for (let i = 0; i < convertedEntries.length; i++) {
+          await setFinishedMovieState(convertedEntries[i])
+        }
+
+        logger.info('[DB] Migration of done downloads successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'done.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'done.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    if (await Bun.file(path.join(databaseDirPath, 'ignore.db')).exists()) {
+      logger.info('[DB] Migrating ignored movies …')
+      try {
+        const ignoreDB = await new Datastore({ filename: path.join(databaseDirPath, 'ignore.db'), autoload: true })
+        const oldEntries = await ignoreDB.findAsync({})
+        const convertedEntries = oldEntries.map(movie => {
+          movie.id = generateIdFromApiID(movie.apiID)
+          movie.originalDate = movie.date
+          return movie
+        })
+
+        for (let i = 0; i < convertedEntries.length; i++) {
+          await addMovieToIgnoreList(convertedEntries[i])
+        }
+
+        logger.info('[DB] Migration of ignored movies successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'ignore.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'ignore.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    if (await Bun.file(path.join(databaseDirPath, 'metaData.db')).exists()) {
+      logger.info('[DB] Migrating meta data …')
+      try {
+        const metaDB = await new Datastore({ filename: path.join(databaseDirPath, 'metaData.db'), autoload: true })
+        const oldEntries = await metaDB.findAsync({})
+        const convertedEntries = {}
+        const channels = oldEntries[0].data
+
+        for (let i = 0; i < channels.length; i++) {
+          const { movies, channel } = channels[i]
+          for (let j = 0; j < movies.length; j++) {
+            const movie = movies[j]
+            if (movie.img.indexOf('cache/') === 0) movie.img = '/' + movie.img
+            movie.id = generateIdFromApiID(movie.apiID)
+            movie.channel = channel
+            delete movie.apiID
+            if (movie.imgCover) delete movie.imgCover
+
+            convertedEntries[movie.id] = movie
+          }
+        }
+
+        await updateAvailableMovieMetaData(convertedEntries)
+
+        logger.info('[DB] Migration of meta data successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'metaData.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'metaData.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    if (await Bun.file(path.join(databaseDirPath, 'schedule.db')).exists()) {
+      logger.info('[DB] Migrating scheduled movies …')
+      try {
+        const scheduleDB = await new Datastore({ filename: path.join(databaseDirPath, 'schedule.db'), autoload: true })
+        const oldEntries = await scheduleDB.findAsync({})
+        const convertedEntries = oldEntries.map(movie => {
+          return {
+            movieID: generateIdFromApiID(movie.apiID),
+            title: movie.title,
+            channel: movie.channel
+          }
+        })
+
+        const { scheduleDownloadByMovieID } = require('./scheduler.js')
+        for (let i = 0; i < convertedEntries.length; i++) {
+          await scheduleDownloadByMovieID(convertedEntries[i])
+        }
+
+        logger.info('[DB] Migration of scheduled movies successful.')
+        logger.info(`[DB] Deleteing "${path.join(databaseDirPath, 'schedule.db').split('/').pop()}" …`)
+        await Bun.file(path.join(databaseDirPath, 'schedule.db')).delete()
+        logger.info('[DB] Deletion successful …')
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+    function generateIdFromApiID (apiID) {
+      return new Bun
+        .CryptoHasher('sha1')
+        .update(apiID)
+        .digest('hex')
+        .substring(0, 10)
+    }
+    logger.info('[DB] Done checking for database migration.')
+  } catch (err) {
+    logger.error('[DB] initialize', err)
   }
-  logger.info('[DB] Done resetting lingering progress entries.')
 }
 
 // ****************** //
@@ -38,17 +169,21 @@ async function initialize () {
 // ****************** //
 async function getAvailableMovieMetaData () {
   const movieMetaData = await db.metaData.findAsync({ type: 'availableMovieMetaData' })
-  return movieMetaData?.[0]?.data || []
+  return movieMetaData?.[0]?.data || {}
+}
+async function getMovieMetaDataByID (movieID) {
+  const movieMetaData = await db.metaData.findAsync({ type: 'availableMovieMetaData' })
+  return movieMetaData?.[0]?.data?.[movieID] || null
 }
 
-function updateAvailableMovieMetaData (availableMovieMetaDataArray) {
-  if (availableMovieMetaDataArray?.length > 0) {
+function updateAvailableMovieMetaData (availableMovieMetaDataObject) {
+  if (Object.keys(availableMovieMetaDataObject)?.length > 0) {
     db.metaData.updateAsync({
       type: 'availableMovieMetaData'
     }, {
       $set: {
         type: 'availableMovieMetaData',
-        data: availableMovieMetaDataArray
+        data: availableMovieMetaDataObject
       }
     }, {
       upsert: true
@@ -56,7 +191,7 @@ function updateAvailableMovieMetaData (availableMovieMetaDataArray) {
     events.emit('availableMovieMetaDataUpdate')
     logger.debug('[DB] DONE: updateAvailableMovieMetaData')
   } else {
-    logger.info('[DB] updateAvailableMovieMetaData: No or empty array provided on update!')
+    logger.info('[DB] updateAvailableMovieMetaData: No or empty object provided on update!')
   }
 }
 
@@ -102,8 +237,8 @@ function clearEpgCache () {
 // /////// //
 // SCHDULE //
 // /////// //
-async function getScheduleData (apiID) {
-  const options = apiID ? { apiID } : {}
+async function getScheduleData (movieID) {
+  const options = movieID ? { id: movieID } : {}
   let scheduleData = await db.schedule.findAsync(options)
 
   scheduleData = _.sortBy(scheduleData, [function (entry) {
@@ -115,39 +250,42 @@ async function getScheduleData (apiID) {
   })
 }
 
-async function addScheduleEntry (entry) {
-  if (entry && entry.apiID) {
+async function addScheduleEntry (movie) {
+  if (movie && movie.id) {
     db.schedule.updateAsync({
-      apiID: entry.apiID
+      id: movie.id
     }, {
-      $set: entry
+      $set: {
+        ...movie,
+        date: new Date()
+      }
     }, {
       upsert: true
     })
     events.emit('scheduleUpdate')
-    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${entry.apiID}"`)
+    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${movie.id}"`)
   } else {
     logger.info('[DB] SCHEDULE UPDATE: No valid entry provided.')
   }
 }
 
-async function setScheduleEntryInProgress (entry, status = false, failCount) {
-  if (entry && entry.apiID) {
+async function setScheduleEntryInProgress (movie, status = false, failCount) {
+  if (movie && movie.id) {
     const updateObject = { inProgress: status }
     if (failCount) updateObject.failCount = failCount
-    if (failCount > entry.scheduleDates.length - 1) updateObject.failed = true
+    if (failCount > movie.scheduleDates.length - 1) updateObject.failed = true
 
     db.schedule.updateAsync({
-      apiID: entry.apiID
+      id: movie.id
     }, {
       $set: updateObject
     }, {
       upsert: false
     })
     events.emit('scheduleUpdate')
-    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${entry.apiID}" in progress "${status}"`)
+    logger.debug(`[DB] SCHEDULE UPDATE DONE: "${movie.id}" in progress "${status}"`)
   } else {
-    logger.info('[DB] SCHEDULE UPDATE: No valid entry provided.')
+    logger.info('[DB] SCHEDULE UPDATE: No valid entry provided.', movie, status, failCount)
   }
 }
 
@@ -163,36 +301,37 @@ async function getScheduleEntryInProgressCount () {
   }
 }
 
-async function deleteScheduleEntry (apiID) {
-  db.schedule.remove({ apiID }, {}, err => {
+async function deleteScheduleEntry (movieID) {
+  db.schedule.remove({ id: movieID }, {}, err => {
     if (err) {
       logger.error(err)
-      events.emit('scheduleUpdate', { error: 'Error while deleting schedule entry.', apiID })
+      events.emit('scheduleUpdate', { error: 'Error while deleting schedule entry.', movieID })
     } else {
       events.emit('scheduleUpdate')
     }
   })
 }
 
-async function setFinishedMovieState (movie, doneState) {
-  db.done.updateAsync({
-    apiID: movie.apiID
+async function setFinishedMovieState (movie) {
+  db.doneAndIgnore.updateAsync({
+    id: movie.id,
+    type: 'done'
   }, {
     $set: {
-      apiID: movie.apiID,
+      id: movie.id,
       title: movie.title,
       channel: movie.channel,
-      done: doneState,
-      date: new Date()
+      type: 'done',
+      date: movie.originalDate || new Date()
     }
   }, {
     upsert: true
   })
-  events.emit('finishedMoviesUpdate')
+  events.emit('doneListUpdate')
 }
 
 async function getFinishedMovies () {
-  const finishedMovies = await db.done.findAsync({ done: true })
+  const finishedMovies = await db.doneAndIgnore.findAsync({ type: 'done' })
   return _.orderBy(
     finishedMovies.map(movie => {
       delete movie._id
@@ -202,52 +341,66 @@ async function getFinishedMovies () {
   )
 }
 
-async function deleteFinishedEntry (apiID) {
-  db.done.remove({ apiID }, {}, err => {
+async function deleteFinishedEntry (movieID) {
+  db.doneAndIgnore.remove({ id: movieID, type: 'done' }, {}, err => {
     if (err) {
       logger.error(err)
-      events.emit('finishedMoviesUpdate', { error: 'Error while deleting done entry.', apiID })
+      events.emit('doneListUpdate', { error: 'Error while deleting done entry.', movieID })
     } else {
-      events.emit('finishedMoviesUpdate')
+      events.emit('doneListUpdate')
     }
   })
-}
-
-async function addMovieToIgnoreList (movie) {
-  db.ignore.updateAsync({
-    apiID: movie.apiID
-  }, {
-    $set: {
-      apiID: movie.apiID,
-      title: movie.title,
-      channel: movie.channel
-    }
-  }, {
-    upsert: true
-  })
-  events.emit('ignoreListUpdate')
 }
 
 async function getIgnoreList () {
-  const ignoreList = await db.ignore.findAsync({})
-  return _.orderBy(
-    ignoreList.map(movie => {
-      delete movie._id
-      return movie
-    }),
-    ['title']
-  )
+  try {
+    const ignoreList = await db.doneAndIgnore.findAsync({ type: 'ignore' })
+    return _.orderBy(
+      ignoreList.map(movie => {
+        delete movie._id
+        return movie
+      }),
+      ['date']
+    )
+  } catch (err) {
+    logger.error(err)
+    return []
+  }
 }
 
-async function deleteMovieFromIgnoreList (apiID) {
-  db.ignore.remove({ apiID }, {}, err => {
-    if (err) {
-      logger.error(err)
-      events.emit('ignoreListUpdate', { error: 'Error while deleting ignore entry.', apiID })
-    } else {
-      events.emit('ignoreListUpdate')
-    }
-  })
+async function addMovieToIgnoreList (movie) {
+  try {
+    await db.doneAndIgnore.updateAsync({
+      id: movie.id,
+      type: 'ignore'
+    }, {
+      $set: {
+        id: movie.id,
+        title: movie.title,
+        channel: movie.channel,
+        type: 'ignore',
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+    events.emit('ignoreListUpdate')
+  } catch (err) {
+    events.emit('ignoreListUpdate', {
+      errorMsg: `Fehler beim löschen der Film ID "${movie.id}" von der Ignore List. "${err.message}"`
+    })
+  }
+}
+
+async function deleteMovieFromIgnoreList (movieID) {
+  try {
+    await db.doneAndIgnore.removeAsync({ id: movieID, type: 'ignore' }, {})
+    events.emit('ignoreListUpdate')
+  } catch (err) {
+    events.emit('ignoreListUpdate', {
+      errorMsg: `Fehler beim hinzufügen der Film ID "${movieID}" zur Ignore List. "${err.message}"`
+    })
+  }
 }
 
 // //////////////////////////////// //
@@ -257,10 +410,219 @@ function getDownloadsProgress () {
   return db.cache.downloadsInProgress
 }
 function updateDownloadProgressEntry (progress) {
-  db.cache.downloadsInProgress[progress.apiID] = progress
+  db.cache.downloadsInProgress[progress.id] = progress
 }
-function deleteDownloadProgressCacheEntry (apiID) {
-  if (db.cache.downloadsInProgress[apiID]) delete db.cache.downloadsInProgress[apiID]
+function deleteDownloadProgressCacheEntry (movieID) {
+  if (db.cache.downloadsInProgress[movieID]) delete db.cache.downloadsInProgress[movieID]
+}
+
+// /////////////// //
+// CACHE FUNCTIONS //
+// /////////////// //
+
+// IMDB Movies & Suggestions
+/**
+ * Get movie object for provided imdbid
+ * @param {String} imdbid as string
+ * @returns {Object | null} Movie object or null
+ */
+async function getImdbMovieByID (imdbid) {
+  try {
+    const doc = await db.imdbMovies.findOneAsync({ imdbid })
+    if (doc?.imdbid) logger.debug('[DB] IMDB CACHE HIT:', imdbid)
+    return doc || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+/**
+ * Save provided imdb movie object
+ * @param {Object} document imdb movie object
+ */
+async function saveImdbMovie (document) {
+  try {
+    await db.imdbMovies.updateAsync({
+      imdbid: document.imdbid
+    }, {
+      ...document,
+      date: new Date()
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] IMDB CACHE ERROR', err)
+  }
+}
+/**
+ * Get suggestion imdbid array for provided title
+ * @param {String} encodedUriTitle Movie title encoded with encodeURIComponent()
+ * @returns {String[]} Array of imdbid
+ */
+async function getImdbSuggestionsForTitle (encodedUriTitle) {
+  try {
+    const doc = await db.imdbSuggestions.findOneAsync({ encodedUriTitle })
+    if (doc?.suggestions) logger.debug('[DB] IMDB CACHE HIT:', encodedUriTitle)
+    return doc?.suggestions || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+/**
+ * Save suggestion object for title
+ * @param {Object} document suggestion object for title encoded with encodeURIComponent()
+ */
+async function saveImdbSuggestions (document) {
+  try {
+    await db.imdbSuggestions.updateAsync({
+      encodedUriTitle: document.encodedUriTitle
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] TMDB CACHE ERROR', err)
+  }
+}
+
+// TMDB Movies & Suggestions
+/**
+ * Get movie object for provided imdbid
+ * @param {String} tmdbid as string
+ * @returns {Object | null} Movie object or null
+ */
+async function getTmdbMovieByID (tmdbid) {
+  try {
+    const doc = await db.tmdbMovies.findOneAsync({ tmdbid })
+    if (doc?.tmdbid) logger.debug('[DB] TMDB CACHE HIT:', tmdbid)
+    return doc || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+/**
+ * Save provided tmdb movie object
+ * @param {Object} document tmdb movie object
+ */
+async function saveTmdbMovie (document) {
+  try {
+    await db.tmdbMovies.updateAsync({
+      tmdbid: document.tmdbid
+    }, {
+      ...document,
+      date: new Date()
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] TMDB CACHE ERROR', err)
+  }
+}
+/**
+ * Get suggestion tmdbid array for provided title
+ * @param {String} encodedUriTitle Movie title encoded with encodeURIComponent()
+ * @returns {String[]} Array of tmdbid
+ */
+async function getTmdbSuggestionsForTitle (encodedUriTitle) {
+  try {
+    const doc = await db.tmdbSuggestions.findOneAsync({ encodedUriTitle })
+    if (doc?.suggestions) logger.debug('[DB] TMDB CACHE HIT:', encodedUriTitle)
+    return doc?.suggestions || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+/**
+ * Save suggestion object for title
+ * @param {Object} document suggestion object for title encoded with encodeURIComponent()
+ */
+async function saveTmdbSuggestions (document) {
+  try {
+    await db.tmdbSuggestions.updateAsync({
+      encodedUriTitle: document.encodedUriTitle
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] TMDB CACHE ERROR', err)
+  }
+}
+
+async function getPlatformMatchingInfoFromDB (tmdbOrImdbID) {
+  try {
+    if (['number', 'string'].indexOf(typeof tmdbOrImdbID) > -1) tmdbOrImdbID = `${tmdbOrImdbID}`
+    else throw new Error('[DB] Platform Match tmdbOrImdbID is no string!')
+
+    const searchObject = (tmdbOrImdbID.indexOf('tt') === 0)
+      ? { imdbid: tmdbOrImdbID }
+      : { tmdbid: tmdbOrImdbID }
+    const doc = await db.platformMatchingInfo.findOneAsync(searchObject)
+    if (doc?.imdbid) logger.debug('[DB] Platform Match CACHE HIT:', tmdbOrImdbID)
+    return doc || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+async function savePlatformMatchingInfoToDB (document) {
+  try {
+    await db.platformMatchingInfo.updateAsync({
+      tmdbid: document.tmdbid,
+      imdbid: document.imdbid
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] Platform Match CACHE ERROR', err)
+  }
+}
+
+async function getOmdbInfoFromDB (searchString) {
+  try {
+    const searchObject = (searchString.indexOf('tt') === 0)
+      ? { imdbID: searchString }
+      : { query: encodeURIComponent(searchString) }
+    const doc = await db.omdb.findOneAsync(searchObject)
+    if (doc?.imdbID) logger.debug('[DB] OMDB CACHE HIT:', encodeURIComponent(searchString))
+    return doc || null
+  } catch (err) {
+    logger.error(err)
+    return null
+  }
+}
+
+async function saveOmdbInfoToDB (document) {
+  try {
+    await db.omdb.updateAsync({
+      imdbID: document.imdbID
+    }, {
+      $set: {
+        ...document,
+        date: new Date()
+      }
+    }, {
+      upsert: true
+    })
+  } catch (err) {
+    logger.error('[DB] OMDB CACHE ERROR', err)
+  }
 }
 
 // //////// //
@@ -270,17 +632,30 @@ async function getAllSettings () {
   const entries = await db.settings.findAsync({})
 
   const defaults = {
+    omdbApiKeyExists: !!process.env.OMDB_API_KEY,
+    tmdbApiReadAccessTokenExists: !!process.env.TMDB_API_READ_ACCESS_TOKEN,
+
     maxDownloads: 3,
     maxDownloadRate: 1.5,
     maxDownloadRateUnit: 'M',
-
-    removeSpacesFromDirNames: false,
 
     downloadResolutionLimit: 'none',
     preferedDownloadLanguage: 'de',
     includeAudioTranscription: true,
     includeClearLanguage: true,
     includeSubtitles: true,
+    convertSubtitles: false,
+
+    autoNavigateOnDownloadAndIgnore: false,
+
+    movieSortOrder: 'date',
+
+    fileAndFolderNaming: 'jellyfin',
+
+    enableImageCaching: true,
+
+    defaultMatcher: 'tmdb',
+
     debugLogsEnabled: false,
 
     channelSelection: [
@@ -326,6 +701,8 @@ async function getAllSettings () {
   return defaults
 }
 async function updateSettings (settings) {
+  if (Object.hasOwnProperty.call(settings, 'omdbApiKeyExists')) delete settings.omdbApiKeyExists
+  if (Object.hasOwnProperty.call(settings, 'tmdbApiReadAccessTokenExists')) delete settings.tmdbApiReadAccessTokenExists
   db.settings.updateAsync({
     type: 'settings'
   }, {
@@ -347,6 +724,7 @@ module.exports = {
 
   // MOVIE META DATA
   getAvailableMovieMetaData,
+  getMovieMetaDataByID,
   updateAvailableMovieMetaData,
   // EPG DATA
   getEpgCacheData,
@@ -373,6 +751,22 @@ module.exports = {
   getDownloadsProgress,
   updateDownloadProgressEntry,
   deleteDownloadProgressCacheEntry,
+
+  getImdbMovieByID,
+  saveImdbMovie,
+  getImdbSuggestionsForTitle,
+  saveImdbSuggestions,
+
+  getTmdbMovieByID,
+  saveTmdbMovie,
+  getTmdbSuggestionsForTitle,
+  saveTmdbSuggestions,
+
+  getPlatformMatchingInfoFromDB,
+  savePlatformMatchingInfoToDB,
+
+  getOmdbInfoFromDB,
+  saveOmdbInfoToDB,
 
   // SETTINGS
   getAllSettings,

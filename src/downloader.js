@@ -1,11 +1,17 @@
 const logger = require('./logger.js')
 const path = require('path')
-const YTDlpWrap = require('yt-dlp-wrap').default
+const YTDlpWrap = require('./ytDlpWrapper.ts').default
 const db = require('./database.js')
 const _ = require('lodash')
 const { serverEvents } = require('./server.js')
-const { sleep, sanitizeFileAndDirNames, getIso639Info } = require('./helperFunctions.js')
+const {
+  sleep,
+  sanitizeFileAndDirNames,
+  getIso639Info,
+  sendNotificationToClients
+} = require('./helperFunctions.js')
 const { downloadPostProcessing } = require('./postProcessing.js')
+const { parse: parseDate, formatDate } = require('date-fns')
 
 async function checkForScheduledDownloads () {
   const settings = await db.getAllSettings()
@@ -35,7 +41,11 @@ async function checkForScheduledDownloads () {
       ) {
         logger.debug('[DOWNLOADER] Starting movie scheduled for download:', movie.downloadUrl)
         downloadMovie(movie)
-        await sleep(250)
+        sendNotificationToClients({
+          msg: `Download von "${movie.title || movie.id}" wurde gestartet.`,
+          time: 5000
+        })
+        await sleep(500)
       }
     }
   }
@@ -43,32 +53,42 @@ async function checkForScheduledDownloads () {
 
 async function downloadMovie (movie) {
   try {
-    // @FIXME remove in 2-3 weeks
-    if (movie.downloadUrl.indexOf('zdf.de') > -1 && movie.downloadUrl.indexOf('.html') > -1) {
-      movie.downloadUrl = movie.downloadUrl.replace('.html', '')
-    }
-    // @FIXME remove in 2-3 weeks
-    const settings = await db.getAllSettings()
+    if (!movie.extraInfo?.downloadTitle) throw new Error('No download title provided!')
     await db.setScheduleEntryInProgress(movie, true)
 
-    movie.baseDownloadPath = path.join(__dirname, '..', 'downloads', sanitizeFileAndDirNames(settings.removeSpacesFromDirNames ? movie.title.replace(/ /g, '_') : movie.title))
+    movie.baseDownloadPath = path.join(__dirname, '..', 'downloads', sanitizeFileAndDirNames(movie.extraInfo.downloadTitle))
+    logger.debug('[DOWNLAODER] baseDownloadPath', movie.baseDownloadPath)
+
+    await generateNfoFileForMovie(movie)
 
     // Download movie via yt-dlp
     await ytDlpDownloader(movie)
 
     // Add movie to finished download index
-    await db.setFinishedMovieState(movie, true)
+    await db.setFinishedMovieState(movie)
     // Remove movie from schedule
-    await db.deleteScheduleEntry(movie.apiID)
+    await db.deleteScheduleEntry(movie.id)
 
     // Post processing and cleanup
     await downloadPostProcessing(movie)
   } catch (err) {
-    await db.setScheduleEntryInProgress(movie, false, movie.failCount + 1)
+    if (err.message === 'No download title provided!') {
+      await db.setScheduleEntryInProgress(movie, false, 9)
+      sendNotificationToClients({
+        result: 'error',
+        msg: `Fehler beim Download von "${movie.title || movie.id}". Error: "${err.message}"`
+      })
+    } else {
+      await db.setScheduleEntryInProgress(movie, false, movie.failCount + 1)
+      sendNotificationToClients({
+        result: 'error',
+        msg: `Fehler beim Download von "${movie.title || movie.id}". Error: "${err.message}"`
+      })
+    }
     logger.error(err)
   } finally {
     // remove progress cache info
-    db.deleteDownloadProgressCacheEntry(movie.apiID)
+    db.deleteDownloadProgressCacheEntry(movie.id)
     // Stop cron job for progress updates
     serverEvents.emit('stopDownloadProgressJob')
   }
@@ -96,6 +116,7 @@ async function ytDlpDownloader (movie) {
         const subtitleOnlyOptions = [
           movie.downloadUrl, // Add url to the movie
           '-P', movie.baseDownloadPath, // Directory to download to
+          '-o', `${movie.extraInfo.downloadTitle}.%(ext)s`,
           '--all-subs',
           '--skip-download' // Do not download the video but write all related files
         ]
@@ -121,21 +142,59 @@ function ytDlpDownloadProcess (movie, downloadOptions, countInfo) {
     // Initialize yt-dlp instance
     const ytDlp = new YTDlpWrap(path.join(__dirname, 'bin', 'yt-dlp'))
 
+    let fileCount = 0
+    let files = []
     // Try downloading movie
     ytDlp
       .exec(downloadOptions)
       .on('ytDlpEvent', (eventType, eventData) => {
         // logger.debug('[YT-DLP]', ytDlpEventEmitter.ytDlpProcess.pid, eventType, eventData, movie.title)
+        if (eventType === 'info' && eventData.indexOf('Downloading subtitles') > -1) {
+          logger.debug(eventType, eventData)
+          files = eventData.split(':').pop().split(',').map(sub => sub.trim())
+        }
+        if (eventType === 'info' && eventData.indexOf('Downloading 1 format') > -1) {
+          logger.debug(eventType, eventData)
+          const tracks = eventData.split(':').pop().split('+').map(sub => sub.trim())
+          files = [...files, ...tracks]
+
+          logger.debug('files', files)
+        }
+        if (eventData.indexOf('%') === -1) {
+          if (
+            // eventData.indexOf('Total fragments') > -1 ||
+            eventData.indexOf('has already been downloaded') > -1 ||
+            // eventData.indexOf('Writing video subtitles') > -1 ||
+            eventData.indexOf('Destination:') > -1
+          ) {
+            fileCount++
+          }
+          logger.debug(eventData)
+        }
         if (eventType === 'download') {
           const data = eventData.split(/of|at|ETA|\(part/).map(part => part.trim())
-          db.updateDownloadProgressEntry({
-            apiID: movie.apiID,
-            percent: parseFloat(data[0]).toFixed(1),
-            size: data[1],
-            speed: data[2],
-            eta: data[3],
-            countInfo
-          })
+          const percent = parseFloat(data[0]).toFixed(1)
+          const size = data[1]?.replace('K', ' K').replace('M', ' M').replace('G', ' G').replace('~ ', '~')
+          const speed = data[2]?.replace('K', ' K').replace('M', ' M').replace('G', ' G')
+          const eta = data[3]?.split(' (')?.[0]
+          const fragments = data[3]?.split(' (frag ')?.[1]?.replace(')', '')
+
+          const info = { id: movie.id, countInfo }
+          if (data[1]?.length < 16) info.size = data[1]?.replace('K', ' K').replace('M', ' M').replace('G', ' G').replace('~ ', '~')
+          if (percent > 0) info.percent = percent
+          if (size?.length < 16) info.size = size
+          if (speed?.length < 16) info.speed = speed
+          if (eta?.length < 16) info.eta = eta
+          if (fragments?.length < 16) info.fragments = fragments
+
+          if (Object.keys(files).length > 0) {
+            info.files = {
+              done: fileCount,
+              count: Object.keys(files).length
+            }
+          }
+
+          db.updateDownloadProgressEntry(info)
         }
       })
       .on('error', error => reject(error))
@@ -144,13 +203,6 @@ function ytDlpDownloadProcess (movie, downloadOptions, countInfo) {
 }
 
 async function getParametersForYtdlp (movie) {
-  if ([
-    'ard', 'das_erste', 'ard_alpha', 'br', 'hr', 'sr',
-    'mdr', 'wdr', 'ndr', 'swr', 'rbb', 'one', 'funk', 'kika'
-  ].indexOf(movie.channel) > -1) {
-    return await getArdGroupParametersForYtdlp(movie)
-  }
-
   const settings = await db.getAllSettings()
   // Create download parameters
   const downloadOptions = [
@@ -160,190 +212,128 @@ async function getParametersForYtdlp (movie) {
 
   // Initialize yt-dlp instance
   const ytDlp = new YTDlpWrap(path.join(__dirname, 'bin', 'yt-dlp'))
-  const audioList = []
-
-  if (['arte'].indexOf(movie.channel) > -1) {
-    // ///////////////////////////////////////////////////// //
-    //                          ARTE                         //
-    //                                                       //
-    // @INFO: Arte only check is required, because arte does //
-    // not work with getVideoInfo aka. --dump-json option    //
-    // ///////////////////////////////////////////////////// //
-    const rawInfo = await ytDlp.execPromise([movie.downloadUrl, '-F'])
-    logger.debug('[DOWNLOADER] ARTE WORKAROUND INFO DATA')
-    logger.debug(rawInfo)
-
-    // Add download parameters
-    if (rawInfo.indexOf(' audio only ') > -1) {
-      const lines = rawInfo
-        .split(/-{80,999}/)[1]
-        .split('\n')
-        .map(line => line.replace(/\s+/g, ' '))
-
-      let audio = []
-      for (let i = 0; i < lines.length; i++) {
-        const currentLine = lines[i]
-        if (currentLine.indexOf('audio only') > -1) {
-          const language = currentLine.match(/\[([a-z]{2,3})\]/)
-          const orderNumber = `000${i}`.slice(-4)
-
-          let sortKey = 'A'
-          if (currentLine.indexOf('_Audiodeskription_') > -1) sortKey = 'Z'
-          else if (currentLine.indexOf('_Klare_Sprache_') > -1) sortKey = 'X'
-
-          let shouldAddAudio = true
-          if (sortKey === 'Z' && !settings.includeAudioTranscription) shouldAddAudio = false
-          if (sortKey === 'X' && !settings.includeClearLanguage) shouldAddAudio = false
-
-          if (shouldAddAudio) {
-            audio.push({
-              id: currentLine.split(' ')[0],
-              lang: language?.[1],
-              order: `${sortKey}${language?.[1].toUpperCase()}${orderNumber}`
-            })
-          }
-        }
-      }
-      audio = _.sortBy(audio, ['order'])
-
-      if (audio.length > 1) {
-        // Enable multiple audio streams in final file
-        downloadOptions.push('--audio-multistreams')
-        // Format selector
-        downloadOptions.push('-f')
-
-        let formatOptionString = await getFfmpegVideoResolutionOption()
-        logger.debug('[DOWNLOADER] settings?.preferedDownloadLanguage', settings?.preferedDownloadLanguage)
-        if (settings?.preferedDownloadLanguage) {
-          const preferedAudio = audio.filter(a => a.lang === settings.preferedDownloadLanguage)
-          for (let i = 0; i < preferedAudio.length; i++) {
-            formatOptionString += `+${preferedAudio[i].id}`
-            audioList.push({ ...preferedAudio[i] })
-          }
-          const remainingAudio = audio.filter(a => a.lang !== settings.preferedDownloadLanguage)
-          for (let i = 0; i < remainingAudio.length; i++) {
-            formatOptionString += `+${remainingAudio[i].id}`
-            audioList.push({ ...remainingAudio[i] })
-          }
-        } else {
-          for (let i = 0; i < audio.length; i++) {
-            formatOptionString += `+${audio[i].id}`
-            audioList.push({ ...audio[i] })
-          }
-        }
-
-        // Add format options
-        downloadOptions.push(formatOptionString)
-      } else if (audio.length === 1) {
-        // Format selector
-        downloadOptions.push('-f')
-        let formatOptionString = await getFfmpegVideoResolutionOption()
-
-        for (let i = 0; i < audio.length; i++) {
-          formatOptionString += `+${audio[i].id}`
-          audioList.push({ ...audio[i] })
-        }
-
-        // Add format options
-        downloadOptions.push(formatOptionString)
-      }
-    }
-  } else if (['zdf', 'zdfneo', 'zdftivi', 'phoenix', '3sat'].indexOf(movie.channel) > -1) {
-    // Get video info
-    const info = await ytDlp.getVideoInfo([...downloadOptions, '-f', 'b'])
-    if (process.env.NODE_ENV === 'development') {
-      await Bun.write(
-        path.join(movie.baseDownloadPath, `ytdlp_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
-        JSON.stringify(info)
-      )
-    }
-
-    // Add download parameters
-    // Check if audio only formats exist and download multi audiostreams if possible
-    const audioOnlyFormats = info?.formats?.filter(format => format.vcodec === 'none') || []
-    // Get all available audio only language codes
-    const audioOnlyLanguages = _.uniqBy(
-      audioOnlyFormats.reverse().map(format => {
-        return {
-          id: format.format_id,
-          lang: format.language,
-          filterID: format.format_id.replace(/[0-9]+/g, '')
-        }
-      }),
-      'filterID'
+  // Get video info
+  const info = await ytDlp.getVideoInfo(downloadOptions)
+  if (process.env.NODE_ENV === 'development') {
+    await Bun.write(
+      path.join(movie.baseDownloadPath, `ytdlp_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
+      JSON.stringify(info)
     )
+  }
 
-    // Filter and sort audio only formats by type
-    let audioFormats = []
-    for (let i = 0; i < audioOnlyLanguages.length; i++) {
-      let sortKey = 'A'
-      if (audioOnlyLanguages[i].id.indexOf('Audiodeskription') > -1) sortKey = 'Z'
-      else if (audioOnlyLanguages[i].id.indexOf('Klare_Sprache') > -1) sortKey = 'X'
-
-      let shouldAddAudio = true
-      if (sortKey === 'Z' && !settings.includeAudioTranscription) shouldAddAudio = false
-      if (sortKey === 'X' && !settings.includeClearLanguage) shouldAddAudio = false
-
-      if (shouldAddAudio) {
-        audioFormats.push({
-          id: audioOnlyLanguages[i].id,
-          lang: audioOnlyLanguages[i].lang,
-          order: `${sortKey}${audioOnlyLanguages[i].lang.toUpperCase()}${`000${i}`.slice(-4)}`
-        })
+  // Check if audio only formats exist and download multi audiostreams if possible
+  const audioOnlyFormats = info?.formats?.filter(format => format.vcodec === 'none') || []
+  // Get all available audio only language codes
+  const audioOnlyLanguages = _.uniqBy(
+    audioOnlyFormats.reverse().map(format => {
+      return {
+        id: format.format_id,
+        lang: format.language?.split('-')[0],
+        filterID: `${format.format_id.replace(/[0-9]+/g, '')}-${format.language}`
       }
+    }),
+    'filterID'
+  )
+
+  // ARD channel group special case ¯\_(ツ)_/¯
+  // They are incapable of hosting video & audio streams correctly
+  if (
+    audioOnlyFormats.length === 0 &&
+    [
+      'ard', 'das_erste', 'ard_alpha', 'br', 'hr', 'sr',
+      'mdr', 'wdr', 'ndr', 'swr', 'rbb', 'one', 'funk', 'kika'
+    ].indexOf(movie.channel) > -1
+  ) {
+    return await getArdGroupParametersForYtdlp(movie)
+  }
+
+  // Ensure output nameing
+  downloadOptions.push('-o')
+  downloadOptions.push(`${movie.extraInfo.downloadTitle}.%(ext)s`)
+
+  // Add download parameters
+  // Filter and sort audio only formats by type
+  const audioList = []
+  let audioFormats = []
+  for (let i = 0; i < audioOnlyLanguages.length; i++) {
+    let sortKey = 'A'
+    if (
+      audioOnlyLanguages[i].id.indexOf('Audiodeskription') > -1 ||
+      audioOnlyLanguages[i].filterID.indexOf('audio-description') > -1
+    ) {
+      sortKey = 'Z'
+    } else if (
+      audioOnlyLanguages[i].id.indexOf('Klare_Sprache') > -1 ||
+      audioOnlyLanguages[i].filterID.indexOf('speech-optimized') > -1
+    ) {
+      sortKey = 'X'
     }
-    audioFormats = _.sortBy(audioFormats, ['order'])
 
-    logger.debug('[YT-DLP] Available audio languages:', audioFormats)
+    let shouldAddAudio = true
+    if (sortKey === 'Z' && !settings.includeAudioTranscription) shouldAddAudio = false
+    if (sortKey === 'X' && !settings.includeClearLanguage) shouldAddAudio = false
 
-    if (audioOnlyFormats.length > 0) {
-      if (audioFormats.length > 1) {
-        // Enable multiple audio streams in final file
-        downloadOptions.push('--audio-multistreams')
-        // Format selector
-        downloadOptions.push('-f')
+    if (shouldAddAudio) {
+      audioFormats.push({
+        id: audioOnlyLanguages[i].id,
+        lang: audioOnlyLanguages[i].lang,
+        type: sortKey,
+        order: `${sortKey}${audioOnlyLanguages[i].lang.toUpperCase()}${`000${i}`.slice(-4)}`
+      })
+    }
+  }
+  audioFormats = _.sortBy(audioFormats, ['order'])
 
-        let formatOptionString = await getFfmpegVideoResolutionOption()
-        const { iso_639_1: iso639v1, iso_639_2: iso639v2 } = getIso639Info(settings.preferedDownloadLanguage)
-        const preferedAudioArray = [iso639v1, iso639v2]
-        if (settings?.preferedDownloadLanguage) {
-          const preferedAudio = audioFormats.filter(a => preferedAudioArray.indexOf(a.lang) > -1)
-          for (let i = 0; i < preferedAudio.length; i++) {
-            formatOptionString += `+${preferedAudio[i].id}`
-            audioList.push(preferedAudio[i])
-          }
-          const remainingAudio = audioFormats.filter(a => preferedAudioArray.indexOf(a.lang) === -1)
-          for (let i = 0; i < remainingAudio.length; i++) {
-            formatOptionString += `+${remainingAudio[i].id}`
-            audioList.push(remainingAudio[i])
-          }
-        } else {
-          for (let i = 0; i < audioFormats.length; i++) {
-            formatOptionString += `+${audioFormats[i].id}`
-            audioList.push(audioFormats[i])
-          }
+  logger.debug('[YT-DLP] Available audio languages:', audioFormats)
+
+  if (audioOnlyFormats.length > 0) {
+    if (audioFormats.length > 1) {
+      // Enable multiple audio streams in final file
+      downloadOptions.push('--audio-multistreams')
+      // Format selector
+      downloadOptions.push('-f')
+
+      let formatOptionString = await getFfmpegVideoResolutionOption()
+      const { iso_639_1: iso639v1, iso_639_2: iso639v2 } = getIso639Info(settings.preferedDownloadLanguage)
+      const preferedAudioArray = [iso639v1, iso639v2]
+      if (settings?.preferedDownloadLanguage) {
+        const preferedAudio = audioFormats.filter(a => preferedAudioArray.indexOf(a.lang) > -1)
+        for (let i = 0; i < preferedAudio.length; i++) {
+          formatOptionString += `+${preferedAudio[i].id}`
+          audioList.push(preferedAudio[i])
         }
-
-        // Add format options
-        downloadOptions.push(formatOptionString)
-      } else if (audioFormats.length === 1) {
-        audioList.push(audioFormats[0])
+        const remainingAudio = audioFormats.filter(a => preferedAudioArray.indexOf(a.lang) === -1)
+        for (let i = 0; i < remainingAudio.length; i++) {
+          formatOptionString += `+${remainingAudio[i].id}`
+          audioList.push(remainingAudio[i])
+        }
+      } else {
+        for (let i = 0; i < audioFormats.length; i++) {
+          formatOptionString += `+${audioFormats[i].id}`
+          audioList.push(audioFormats[i])
+        }
       }
-    } else {
-      const formats = [...info.formats].reverse()
-      const resolutionLimit = await getResolutionLimitAsInt()
-      for (let i = 0; i < formats.length; i++) {
-        const format = formats[i]
-        if (format.height <= resolutionLimit) {
-          audioList.push({
-            id: format.format_id,
-            lang: format.language
-          })
-          i = Infinity
-        }
+
+      // Add format options
+      downloadOptions.push(formatOptionString)
+    } else if (audioFormats.length === 1) {
+      audioList.push(audioFormats[0])
+    }
+  } else {
+    const formats = [...info.formats].reverse()
+    const resolutionLimit = await getResolutionLimitAsInt()
+    for (let i = 0; i < formats.length; i++) {
+      const format = formats[i]
+      if (format.height <= resolutionLimit) {
+        audioList.push({
+          id: format.format_id,
+          lang: format.language
+        })
+        i = Infinity
       }
     }
   }
+  // }
 
   if (audioList.length > 0) await createAudioAndPostProcessingFiles(movie, audioList)
 
@@ -413,13 +403,17 @@ async function getArdGroupParametersForYtdlp (movie) {
   }
 
   // Get video info
-  const info = await ytDlp.getVideoInfo([...downloadOptions, '-f', 'b'])
+  const info = await ytDlp.getVideoInfo(downloadOptions)
   if (process.env.NODE_ENV === 'development') {
     await Bun.write(
       path.join(movie.baseDownloadPath, `ytdlp_info_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.json`),
       JSON.stringify(info)
     )
   }
+
+  // Ensure output naming
+  downloadOptions.push('-o')
+  downloadOptions.push(`${movie.extraInfo.downloadTitle}.%(ext)s`)
 
   // Add download parameters
   // Get all available audio language codes
@@ -443,7 +437,14 @@ async function getArdGroupParametersForYtdlp (movie) {
       for (let i = 0; i < rawAudioFormats.length; i++) {
         if (
           rawAudioFormats[i].language === lang &&
-          rawAudioFormats[i].height >= 360
+          rawAudioFormats[i].height >= 360 &&
+          rawAudioFormats[i].protocol === 'm3u8_native'
+        ) return rawAudioFormats[i]
+      }
+      for (let i = 0; i < rawAudioFormats.length; i++) {
+        if (
+          rawAudioFormats[i].language === lang &&
+          rawAudioFormats[i].height >= 540
         ) return rawAudioFormats[i]
       }
     }
@@ -574,10 +575,11 @@ async function getArdGroupParametersForYtdlp (movie) {
 }
 
 async function createAudioAndPostProcessingFiles (movie, audioList) {
+  const settings = await db.getAllSettings()
   const audioJson = []
 
   for (let i = 0; i < audioList.length; i++) {
-    const { id: audioID, lang: isoLangCode } = audioList[i]
+    const { id: audioID, lang: isoLangCode, type } = audioList[i]
     logger.debug('[DOWNLOADER] Audio file & post processing:', audioID, isoLangCode)
     const isoCodeInfo = getIso639Info(isoLangCode)
     logger.debug('[DOWNLOADER] Audio file & post processing:', isoCodeInfo, typeof isoLangCode, isoLangCode)
@@ -592,8 +594,8 @@ async function createAudioAndPostProcessingFiles (movie, audioList) {
       audioEntry.iso_639_2 = isoCodeInfo.iso_639_2
       audioEntry.title = `${isoCodeInfo.german}`
 
-      if (audioID.indexOf('Audiodeskription') > -1) audioEntry.title += ' (Audiodeskription)'
-      else if (audioID.indexOf('_Klare_Sprache_') > -1) audioEntry.title += ' (klare Sprache)'
+      if (type === 'Z') audioEntry.title += ' (Audiodeskription)'
+      else if (type === 'X') audioEntry.title += ' (klare Sprache)'
       else if (
         audioID.indexOf('Originalton') > -1 ||
         audioID.indexOf('_Original_') > -1 ||
@@ -636,10 +638,12 @@ for file in *.mp4 ; do
   rm "$file"
 done
 
-for filename in *.vtt; do
-  fname="\${filename%.*}"
-  ffmpeg -i "$filename" "$fname.srt"
-done
+${settings.convertSubtitles
+  ? `for file in *.vtt; do
+  filename="\${file%.*}"
+  ffmpeg -i "$file" "$filename.srt"
+done`
+: ''}
 
 find . -size 0 -delete`
 
@@ -650,6 +654,7 @@ find . -size 0 -delete`
 }
 
 async function createMultiFilePostProcessingFiles (movie, multiOptions) {
+  const settings = await db.getAllSettings()
   const { files } = multiOptions
 
   const audioJson = []
@@ -691,7 +696,7 @@ async function createMultiFilePostProcessingFiles (movie, multiOptions) {
     if (files[i].video) mapString += ` -map ${i}:v:0`
     mapString += ` -map ${i}:a:0 -metadata:s:a:${i} language=${audioJson[i].iso_639_2} -metadata:s:a:${i} title="${audioJson[i].title}"`
   }
-  ffmpegCommandString += `${mapString} "${movie.title}.mkv"`
+  ffmpegCommandString += `${mapString} "${movie.extraInfo.downloadTitle}.mkv"`
 
   logger.debug('[DOWNLOADER] ffmpegCommandString', ffmpegCommandString)
 
@@ -701,10 +706,12 @@ cd "${movie.baseDownloadPath}"
 # Combine video and all audio tracks from the ${audioJson.length} files
 ${ffmpegCommandString}
 
-for filename in *.vtt; do
-  fname="\${filename%.*}"
-  ffmpeg -i "$filename" "$fname.srt"
-done
+${settings.convertSubtitles
+  ? `for file in *.vtt; do
+  filename="\${file%.*}"
+  ffmpeg -i "$file" "$filename.srt"
+done`
+: ''}
 
 find ./*.mp4 -delete
 
@@ -714,6 +721,85 @@ find . -size 0 -delete`
     path.join(movie.baseDownloadPath, `audio_rename_script_${sanitizeFileAndDirNames(movie.title).replace(/ /g, '_')}.sh`),
     ffmpegAudioTitleString
   )
+}
+
+async function generateNfoFileForMovie (movie) {
+  try {
+    let nfoContent = '<?xml version="1.0" encoding="utf-8" standalone="yes"?>'
+    nfoContent += '\n<movie>'
+
+    if (movie.extraInfo.imdbid) nfoContent += `\n  <imdbid>${movie.extraInfo.imdbid}</imdbid>`
+    if (movie.extraInfo.tmdbid) nfoContent += `\n  <tmdbid>${movie.extraInfo.tmdbid}</tmdbid>`
+    if (movie.extraInfo.title) nfoContent += `\n  <title>${movie.extraInfo.title}</title>`
+    if (movie.extraInfo.originalTitle) nfoContent += `\n  <originaltitle>${movie.extraInfo.originalTitle}</originaltitle>`
+    if (movie.extraInfo.year) nfoContent += `\n  <year>${movie.extraInfo.year}</year>`
+    if (movie.extraInfo.plot) nfoContent += `\n  <plot>${movie.extraInfo.plot}</plot>`
+    if (movie.extraInfo.runtime) nfoContent += `\n  <runtime>${movie.extraInfo.runtime}</runtime>`
+    if (movie.extraInfo.release) {
+      const isDateFormated = /\d{4}-\d{2}-\d{2}/.test(movie.extraInfo.release)
+      let date = ''
+      if (isDateFormated) date = movie.extraInfo.release
+      else {
+        if (/\d{2}\.\d{2}\.\d{4}/.test(movie.extraInfo.release)) {
+          date = formatDate(parseDate(movie.extraInfo.release, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd')
+        }
+        // Fallback leave as is
+        date = movie.extraInfo.release
+      }
+      nfoContent += `\n  <releasedate>${date}</releasedate>`
+      nfoContent += `\n  <premiered>${date}</premiered>`
+    }
+
+    for (let i = 0; i < movie.extraInfo.genres.length; i++) {
+      nfoContent += `\n  <genre>${movie.extraInfo.genres[i]}</genre>`
+    }
+    for (let i = 0; i < movie.extraInfo.actors.length; i++) {
+      nfoContent += '\n  <actor>'
+      nfoContent += `\n    <name>${movie.extraInfo.actors[i]}</name>`
+      nfoContent += `\n    <order>${i}</order>`
+      nfoContent += '\n  </actor>'
+    }
+    for (let i = 0; i < movie.extraInfo.director.length; i++) {
+      nfoContent += `\n  <director>${movie.extraInfo.director[i]}</director>`
+    }
+    for (let i = 0; i < movie.extraInfo.writer.length; i++) {
+      nfoContent += `\n  <credits>${movie.extraInfo.writer[i]}</credits>`
+    }
+
+    const ratingKeys = Object.keys(movie.extraInfo.ratings || {})
+    if (ratingKeys.length > 0) {
+      nfoContent += '\n  <ratings>'
+
+      if (ratingKeys.indexOf('imdb') > -1) {
+        nfoContent += `\n    <rating name="imdb" max="10"${ratingKeys[0] === 'imdb' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${movie.extraInfo.ratings.imdb}</value>`
+        nfoContent += '\n    </rating>'
+      }
+      if (ratingKeys.indexOf('tmdb') > -1) {
+        nfoContent += `\n    <rating name="tmdb" max="10"${ratingKeys[0] === 'tmdb' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${movie.extraInfo.ratings.tmdb}</value>`
+        nfoContent += '\n    </rating>'
+      }
+      if (ratingKeys.indexOf('metacritic') > -1) {
+        nfoContent += `\n    <rating name="metacritic" max="100"${ratingKeys[0] === 'metacritic' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${movie.extraInfo.ratings.metacritic}</value>`
+        nfoContent += '\n    </rating>'
+      }
+      if (ratingKeys.indexOf('rotten') > -1) {
+        nfoContent += `\n    <rating name="rottentomatoes" max="100"${ratingKeys[0] === 'rotten' ? ' default="true"' : ''}>`
+        nfoContent += `\n      <value>${parseInt(movie.extraInfo.ratings.rotten)}</value>`
+        nfoContent += '\n    </rating>'
+      }
+
+      nfoContent += '\n  </ratings>'
+    }
+
+    nfoContent += '\n</movie>'
+
+    await Bun.write(path.join(movie.baseDownloadPath, 'movie.nfo'), nfoContent)
+  } catch (err) {
+    logger.error('[DOWNLAODER] Error while creating movie.nfo …', err.message)
+  }
 }
 
 module.exports = {

@@ -1,13 +1,13 @@
 const _ = require('lodash')
 const logger = require('../../logger.js')
-const { default: axios } = require('axios')
 const { addDays, formatDate } = require('date-fns')
 const { parseHTML } = require('linkedom')
 const {
   sleep,
   getRandomUserAgent,
   getCleanThumbnailUrl,
-  getRandomInteger
+  getRandomInteger,
+  axiosWithTimeouts: axios
 } = require('../../helperFunctions.js')
 const {
   getEpgCacheData,
@@ -24,14 +24,14 @@ async function getUpcomingMoviesFromEpg () {
     for (let i = 0; i <= epgDays; i++) {
       const epgDayString = formatDate(addDays(today, i), 'yyyy-MM-dd')
       if (!epgCache[epgDayString]) {
-        logger.debug(`[API ARTE] EPG "${epgDayString}"`)
+        logger.debug(`[API ARTE] EPG REQUEST FOR DAY "${epgDayString}"`)
         const { data: epgJSON } = await axios.get(`${baseEpgUrl}${epgDayString}`, {
           headers: {
             'User-Agent': getRandomUserAgent(),
             Accept: 'application/json'
           }
         })
-        logger.debug(`[API ARTE] EPG DONE "${epgDayString}"`)
+        logger.debug(`[API ARTE] EPG REQUEST FOR DAY DONE "${epgDayString}"`)
 
         const epgMovieData = getMoviesFromEpgJSON(epgJSON)
 
@@ -61,7 +61,8 @@ async function getUpcomingMoviesFromEpg () {
 
     return epgMovies
   } catch (err) {
-    logger.error(err)
+    if (err.message === 'canceled') logger.error('[EPG CACHE ARTE] REQUEST TIMEOUT!')
+    else logger.error(err)
     return null
   }
 }
@@ -72,7 +73,6 @@ function getMoviesFromEpgJSON (epgJSON) {
   let epgMovies = []
   let zoneData = []
   const zones = epgJSON.value.zones
-  logger.debug('[API ARTE] EPG ZONES DATA RAW', zones)
   for (let i = 0; i < zones.length; i++) {
     zoneData = [...zoneData, ...(zones[i]?.content?.data || [])]
   }
@@ -83,7 +83,7 @@ function getMoviesFromEpgJSON (epgJSON) {
   }
 
   epgMovies = _.compact(epgMovies)
-  logger.debug('[API ARTE] EPG (epgMovies)', epgMovies)
+  logger.debug('[API ARTE] EPG (epgMovies)', epgMovies.length)
   return epgMovies
 }
 
@@ -96,7 +96,8 @@ function normalizeEpgMovieData (movieData) {
       description: movieData.teaserText,
       time: {},
       duration: `${Math.ceil(movieData.duration / 60)} min`,
-      apiID: movieData.programId
+      apiID: movieData.programId,
+      channel: 'arte'
     }
 
     if (movieData.availability) {

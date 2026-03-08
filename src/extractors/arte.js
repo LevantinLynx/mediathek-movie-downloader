@@ -1,13 +1,13 @@
 const _ = require('lodash')
 const logger = require('../logger.js')
-const { default: axios } = require('axios')
 const { formatDate } = require('date-fns')
 const {
   sleep,
   getRandomInteger,
   getRandomUserAgent,
   getCleanThumbnailUrl,
-  cacheImageAndGenerateCachedLink
+  cacheImageAndGenerateCachedLink,
+  axiosWithTimeouts: axios
 } = require('../helperFunctions.js')
 const { getUpcomingMoviesFromEpg } = require('./epg/arteEPG.js')
 
@@ -16,7 +16,8 @@ const extractor = {
   validUrlRegex: [
     /https?:\/\/(?:www\.)?arte\.tv\/({fr|de|en|es|it|pl})\/videos\/(\d{6}-\d{3}-[AF])/
   ],
-  channel: 'arte'
+  channel: 'arte',
+  validChannelList: ['arte']
 }
 
 async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
@@ -48,7 +49,8 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
         description: metadata.description,
         time: {},
         duration: `${Math.ceil(metadata.duration.seconds / 60)} min`,
-        apiID: metadata.providerId
+        apiID: metadata.providerId,
+        channel: 'arte'
       }
 
       if (rights?.begin) {
@@ -91,6 +93,15 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
     }
 
     const epgData = await getUpcomingMoviesFromEpg()
+
+    if (epgData) {
+      for (let i = 0; i < epgData.length; i++) {
+        epgData[i].img = await cacheImageAndGenerateCachedLink(
+          getCleanThumbnailUrl(epgData[i].img),
+          cachedImageFileHashList
+        )
+      }
+    }
 
     movieList = _.uniqBy(
       _.flatten([movieList, epgData]),
