@@ -1,6 +1,6 @@
 {
   "name": "mediathek-movie-downloader",
-  "version": "2026.2.8",
+  "version": "2026.3.8",
   "main": "index.js",
   "license": "MIT",
   "private": true,
