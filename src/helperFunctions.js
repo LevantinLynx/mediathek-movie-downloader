@@ -493,10 +493,15 @@ function getFileExtention (headers) {
   return fileExtention
 }
 
-function generateIdFromApiID (apiID) {
+/**
+ * Generate a 10 character long hex hash from input using sha1
+ * @param {(String|TypedArray|ArrayBuffer)} input This method accepts "String", "TypedArray" and "ArrayBuffer".
+ * @returns {String} 10 character hex id string
+ */
+function generateIdFromInput (input) {
   return new Bun
     .CryptoHasher('sha1')
-    .update(apiID)
+    .update(input)
     .digest('hex')
     .substring(0, 10)
 }
@@ -511,7 +516,7 @@ module.exports = {
   sleep,
   getIso639Info,
   cacheImageAndGenerateCachedLink,
-  generateIdFromApiID,
+  generateIdFromInput,
 
   axiosWithTimeouts
 }

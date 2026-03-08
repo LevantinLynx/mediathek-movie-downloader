@@ -6,7 +6,7 @@ const dreisatExtractor = require('./dreisat.js')
 const { getAllSettings } = require('../database.js')
 const {
   sendNotificationToClients,
-  generateIdFromApiID
+  generateIdFromInput
 } = require('../helperFunctions.js')
 const path = require('path')
 const fs = require('fs-extra')
@@ -95,7 +95,7 @@ async function getExtractorMovies (channelExtractor, activeChannels, cachedImage
     channelApiData = channelApiData.filter(movie => activeAndValidChannels.indexOf(movie.channel) > -1)
     for (let i = 0; i < channelApiData.length; i++) {
       const movie = channelApiData[i]
-      const hash = generateIdFromApiID(movie.apiID)
+      const hash = generateIdFromInput(movie.apiID)
       cache[hash] = {
         ...channelApiData[i],
         id: hash
