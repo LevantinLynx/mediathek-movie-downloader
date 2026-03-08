@@ -1,0 +1,204 @@
+:root {
+  --bgDark1: #2e3440;
+  --bgDark2: #3b4252;
+  --bgDark3: #4c566a;
+
+  --bgLight1: #eceff4;
+  --bgLight2: #e5e9f0;
+  --bgLight3: #d8dee9;
+
+  --main: #0ff278;
+  --purpleBright: #b477ff;
+  --yellowBright: #ffec54;
+  --tealBright: #7dded6;
+  --redBright: #fa4859;
+
+  --blue: #5E81AC;
+  --lightBlue: #81A1C1;
+  --purple: #b48ead;
+  --red: #BF616A;
+  --orange: #D08770;
+  --yellow: #EBCB8B;
+  --green: #A3BE8C;
+
+  --highlightBg: var(--main);
+  --highlightColor: #000;
+
+  --buttonDarkBg: #333333;
+  --buttonDarkColor: #ffffff;
+
+  --buttonLightBg: #fff;
+  --buttonLightColor: #333;
+
+  --fontColorDark: #fff;
+  --fontColorLight: #000;
+
+  --bg1: var(--bgDark1);
+  --bg2: var(--bgDark2);
+  --bg3: var(--bgDark3);
+  --buttonBg: var(--buttonLightBg);
+  --buttonColor: var(--buttonLightColor);
+  --fontColor: var(--fontColorDark);
+  
+  --boxPadding: 1.4rem;
+  --borderRadius: .4rem;
+  --boxMargin: 1.6rem;
+
+  --boxShadow: 0 .2rem .6rem rgba(0,0,0,.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* http://meyerweb.com/eric/tools/css/reset/ // v2.0 | 20110126 // License: none (public domain) */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+  display: block;
+}
+body {
+  line-height: 1;
+}
+ol, ul {
+  list-style: none;
+}
+blockquote, q {
+  quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+  content: '';
+  content: none;
+}
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--bg1);
+  color: var(--fontColor);
+  font-size: 10px;
+  font-family: system-ui;
+  line-height: 1.2;
+}
+/* Custom styles */
+body {
+  overflow-y: scroll;
+}
+input {
+  outline: none;
+  border-radius: 0;
+  border: 0;
+  background-color: var(--bg1);
+  color: var(--fontColor);
+}
+input::placeholder {
+  color: rgba(255, 255, 255, .65);
+}
+input, label, button {
+  font-size: 1.6rem;
+}
+img {
+  max-width: 100%;
+  vertical-align: top;
+}
+strong {
+  font-weight: 600;
+}
+
+/* Vuejs animations */
+[v-cloak] {
+  display: none;
+}
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 175ms linear;
+}
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
+/* Vuejs animations end */
+
+h1 {
+  margin: var(--boxMargin) 0 calc(var(--boxMargin) * 2);
+  font-size: 3.4rem;
+  font-weight: 300;
+}
+h1 small {
+  font-size: .6em;
+}
+h2 {
+  font-size: 2.2rem;
+}
+.button,
+button {
+  outline: none;
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--borderRadius);
+  padding: .8rem 1rem;
+
+  background-color: var(--buttonBg);
+  text-decoration: none;
+  color: var(--buttonColor);
+}
+
+.box {
+  background-color: var(--bg3);
+  padding: var(--boxPadding);
+  border-radius: var(--borderRadius);
+  box-shadow: var(--boxShadow);
+  overflow: hidden;
+}
+.box header {
+  --offset: calc(var(--boxPadding) * -1);
+  background: rgba(0,0,0,.8);
+  margin: var(--offset) var(--offset) var(--boxPadding);
+  padding: var(--boxPadding);
+}
+.box p:not(:last-child) {
+  margin-bottom: 1em;
+}
+
+article header {
+  padding: var(--boxPadding);
+  border-top-left-radius: var(--borderRadius);
+  border-top-right-radius: var(--borderRadius);
+}
+article header + .box {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+@media (width <= 560px) {
+  .button,
+  button {
+    padding: 1.4rem 1rem;
+  }
+}
