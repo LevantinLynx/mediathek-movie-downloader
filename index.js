@@ -201,6 +201,11 @@ db.events.on('scheduleUpdate', async (info) => {
 })
 
 db.events.on('settingsUpdate', async () => {
+  sendNotificationToClients({
+    result: 'success',
+    msg: 'Einstellungen gespeichert.',
+    time: 1500
+  })
   io.emit('settingsUpdate', await db.getAllSettings())
 })
 
