@@ -50,6 +50,24 @@ export const useSettingsStore = defineStore('settings', {
       ]
     },
     nextMetaDataUpdateDate: null,
-    version: null
-  })
+    version: null,
+  }),
+  getters: {
+    isIosStandalone () {
+      return window.navigator.standalone
+    },
+    isStandalone () {
+      return window.matchMedia('(display-mode: standalone)').matches
+    },
+    isMinimalUI () {
+      return window.matchMedia('(display-mode: minimal-ui)').matches
+    },
+    isLaunchedAsApp (state) {
+      return ( // App mode if any of these are true
+        state.isIosStandalone ||
+        state.isStandalone ||
+        state.isMinimalUI
+      )
+    },
+  }
 })

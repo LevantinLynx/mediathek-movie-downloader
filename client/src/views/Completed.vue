@@ -181,7 +181,7 @@ function chunk (arr, chunkSize = 1) {
   return chunked
 }
 
-const chunkSize = 10
+const chunkSize = 8
 
 const chunkedDoneList = computed(() => {
   const filteredList = doneList.value.filter(movie => movie.title.toLowerCase().indexOf(doneListFilter.value.toLowerCase()) > -1)

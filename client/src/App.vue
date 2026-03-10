@@ -10,7 +10,7 @@
     </router-view>
   </main>
 
-  <aside class="menu">
+  <aside class="menu" :class="{ pwaMode: settingsStore.isLaunchedAsApp, ios: settingsStore.isIosStandalone }">
     <transition>
     <aside id="connectionStatus" v-if="!state.connected">
       <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -201,6 +201,15 @@ const settingsRouteSelected = computed(() => route.fullPath.indexOf('/settings')
 </script>
 
 <style scoped>
+/* PWA Overwrites */
+.pwaMode #menu {
+  padding: 1.6rem 2rem 3.2rem;
+}
+.pwaMode #menu nav svg {
+  --icon-size: 4.8rem;
+}
+/* PWA Overwrites end */
+
 #loading {
   position: absolute;
   top: 0;
@@ -232,7 +241,7 @@ main.content {
 
   display: flex;
   justify-content: center;
-  padding: 1.6rem 2rem 3.6rem;
+  padding: 2rem;
   background-color: rgba(0,0,0,.88);
   color: rgba(255,255,255, .65);
   -webkit-backdrop-filter: blur(.6rem);
