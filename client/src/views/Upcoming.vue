@@ -47,7 +47,7 @@
         Sollte gewünscht sein, dass die Filme sofort abgerufen werden, kann dies in den <RouterLink to="/settings">Einstellungen</RouterLink> erzwungen werden.
       </p>
       <p>
-        <small><strong>Hinweis:</strong> Werden die Daten der TV-Sender innerhalb der Jugendschutzzeiten (6-23 Uhr) abgerufen, sind diese unvollständig.</small>
+        <small><strong>Hinweis:</strong> Werden die Daten/Bilder der TV-Sender innerhalb der Jugendschutzzeiten (6-23 Uhr) abgerufen, sind diese unvollständig.</small>
       </p>
     </div>
     <div v-else-if="availableMovies.length === 0" class="pretext">
