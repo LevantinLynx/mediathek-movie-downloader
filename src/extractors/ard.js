@@ -46,6 +46,7 @@ async function scrapeArdMovieData (cachedImageFileHashList) {
     return movieList
   } catch (err) {
     logger.error(err)
+    return null
   }
 }
 

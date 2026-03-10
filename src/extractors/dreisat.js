@@ -161,6 +161,7 @@ async function scrape3satMovieData (cachedImageFileHashList) {
   } catch (err) {
     logger.error('Error while loading movie json data via axios …')
     logger.error(err)
+    return null
   }
 }
 

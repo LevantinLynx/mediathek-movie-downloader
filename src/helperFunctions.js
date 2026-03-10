@@ -118,30 +118,32 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
     return url
   }
 
-  // Fallback if image is unavailable
-  if (!url) return '/imgs/movie_image_not_found.svg'
-
-  if ( // Don't cache fsk warning images
-    url.indexOf('https://zdf-prod-futura.zdf.de/static/mediathek/fskImages/') > -1
-  ) return url
-
-  const urlObject = new URL(url)
-  const fileNameHash = new Bun
-    .CryptoHasher('sha1')
-    .update(`${urlObject.origin}${urlObject.pathname}`)
-    .digest('hex')
-    .substring(0, 10)
-
-  if (cacheHashList[fileNameHash]) {
-    logger.debug('[IMG CACHE] File is already cached!')
-    if (process.env.NODE_ENV === 'development') {
-      return process.env.DEV_BASE_URL + path.join('/', 'cache', `${cacheHashList[fileNameHash]}`)
-    } else {
-      return path.join('/', 'cache', `${cacheHashList[fileNameHash]}`)
-    }
-  }
-
   try {
+    // Fallback if image is unavailable
+    if (!url) return '/imgs/movie_image_not_found.svg'
+
+    // If image is allready cached return url
+    if (url.indexOf('/cache/') === 0) return url
+
+    // Don't cache zdf fsk warning images
+    if (url.indexOf('https://zdf-prod-futura.zdf.de/static/mediathek/fskImages/') > -1) return url
+
+    const urlObject = new URL(url)
+    const fileNameHash = new Bun
+      .CryptoHasher('sha1')
+      .update(`${urlObject.origin}${urlObject.pathname}`)
+      .digest('hex')
+      .substring(0, 10)
+
+    if (cacheHashList[fileNameHash]) {
+      logger.debug('[IMG CACHE] File is already cached!')
+      if (process.env.NODE_ENV === 'development') {
+        return process.env.DEV_BASE_URL + path.join('/', 'cache', `${cacheHashList[fileNameHash]}`)
+      } else {
+        return path.join('/', 'cache', `${cacheHashList[fileNameHash]}`)
+      }
+    }
+
     logger.debug('[IMG CACHE] Caching image:', url)
     let result = null
     let fileExtention = null
@@ -203,7 +205,7 @@ async function cacheImageAndGenerateCachedLink (url, cacheHashList) {
   } catch (err) {
     logger.error(err)
   }
-  return url
+  return url || '/imgs/movie_image_not_found.svg'
 }
 
 async function getArdImageData (urlObject) {

@@ -92,6 +92,14 @@ async function getExtractorMovies (channelExtractor, activeChannels, cachedImage
   const activeAndValidChannels = _.intersection(channelExtractor.validChannelList, activeChannels)
   if (activeAndValidChannels.length > 0) {
     let channelApiData = await channelExtractor.scrapeMovieData(cachedImageFileHashList)
+    if (channelApiData === null) {
+      sendNotificationToClients({
+        result: 'error',
+        msg: `Fehler beim Abruf der Filme von "${channelExtractor.validChannelList.join(', ')}".`,
+        time: 5000
+      })
+      return
+    }
     channelApiData = channelApiData.filter(movie => activeAndValidChannels.indexOf(movie.channel) > -1)
     for (let i = 0; i < channelApiData.length; i++) {
       const movie = channelApiData[i]
