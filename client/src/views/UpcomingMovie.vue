@@ -652,6 +652,7 @@ article .box {
 .box.action .button {
   display: flex;
   gap: .6rem;
+  align-items: center;
 }
 .box.action .inputGrp {
   display: flex;
