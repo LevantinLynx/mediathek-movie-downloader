@@ -739,31 +739,36 @@ async function generateNfoFileForMovie (movie) {
       const isDateFormated = /\d{4}-\d{2}-\d{2}/.test(movie.extraInfo.release)
       let date = ''
       if (isDateFormated) date = movie.extraInfo.release
-      else {
-        if (/\d{2}\.\d{2}\.\d{4}/.test(movie.extraInfo.release)) {
-          date = formatDate(parseDate(movie.extraInfo.release, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd')
-        }
-        // Fallback leave as is
-        date = movie.extraInfo.release
+      else if (/\d{2}\.\d{2}\.\d{4}/.test(movie.extraInfo.release)) {
+        date = formatDate(parseDate(movie.extraInfo.release, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd')
+      } else {
+        date = movie.extraInfo.release // Fallback leave as is
       }
       nfoContent += `\n  <releasedate>${date}</releasedate>`
       nfoContent += `\n  <premiered>${date}</premiered>`
     }
-
-    for (let i = 0; i < movie.extraInfo.genres.length; i++) {
-      nfoContent += `\n  <genre>${movie.extraInfo.genres[i]}</genre>`
+    if (movie.extraInfo.genres) {
+      for (let i = 0; i < movie.extraInfo.genres.length; i++) {
+        nfoContent += `\n  <genre>${movie.extraInfo.genres[i]}</genre>`
+      }
     }
-    for (let i = 0; i < movie.extraInfo.actors.length; i++) {
-      nfoContent += '\n  <actor>'
-      nfoContent += `\n    <name>${movie.extraInfo.actors[i]}</name>`
-      nfoContent += `\n    <order>${i}</order>`
-      nfoContent += '\n  </actor>'
+    if (movie.extraInfo.actors) {
+      for (let i = 0; i < movie.extraInfo.actors.length; i++) {
+        nfoContent += '\n  <actor>'
+        nfoContent += `\n    <name>${movie.extraInfo.actors[i]}</name>`
+        nfoContent += `\n    <order>${i}</order>`
+        nfoContent += '\n  </actor>'
+      }
     }
-    for (let i = 0; i < movie.extraInfo.director.length; i++) {
-      nfoContent += `\n  <director>${movie.extraInfo.director[i]}</director>`
+    if (movie.extraInfo.director) {
+      for (let i = 0; i < movie.extraInfo.director.length; i++) {
+        nfoContent += `\n  <director>${movie.extraInfo.director[i]}</director>`
+      }
     }
-    for (let i = 0; i < movie.extraInfo.writer.length; i++) {
-      nfoContent += `\n  <credits>${movie.extraInfo.writer[i]}</credits>`
+    if (movie.extraInfo.writer) {
+      for (let i = 0; i < movie.extraInfo.writer.length; i++) {
+        nfoContent += `\n  <credits>${movie.extraInfo.writer[i]}</credits>`
+      }
     }
 
     const ratingKeys = Object.keys(movie.extraInfo.ratings || {})
