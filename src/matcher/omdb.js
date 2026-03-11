@@ -15,15 +15,16 @@ const OMDB_REQUEST_TIMOUT_IN_MS = 15_000
  * @returns {Object | null}
  */
 async function getOmdbInfoByTitleOrImdbID (searchString) {
+  if (!searchString) return null
   let suggestion = null
   if (!process.env.OMDB_API_KEY) {
     logger.debug('[MATCHER] OMDB No API Key found skipping!')
     return suggestion
   }
-  const cacheInfo = await getOmdbInfoFromDB(searchString)
-  if (cacheInfo) return cacheInfo
-
   try {
+    const cacheInfo = await getOmdbInfoFromDB(searchString)
+    if (cacheInfo) return cacheInfo
+
     if (searchString.indexOf('tt') === 0) {
       suggestion = await getOmdbInfoByImdbID(searchString)
     } else {
