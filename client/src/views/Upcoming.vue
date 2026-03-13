@@ -29,7 +29,7 @@
           </transition>
           <a @click="preFilter === channel ? preFilter = '' : preFilter = channel" v-for="channel in channelList" :class="{ active: preFilter === channel }">
             <img :src="'/logo/' + channel + '.svg'"
-              :height="channel === 'arte' ? '16px' : '22px'"
+              :height="['arte', 'ard', 'zdf'].indexOf(channel) > -1 ? '16px' : '22px'"
               :alt="channel + ' Logo'"
               loading="lazy">
           </a>

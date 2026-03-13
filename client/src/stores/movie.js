@@ -28,9 +28,18 @@ export const useMovieStore = defineStore('movie', {
       if (!state.availableMovieMetaData) return []
 
       let sortedList = Object.values(state.availableMovieMetaData)
+      const channelOrder = [
+        'zdf', 'zdfneo', 'zdftivi',
+        'arte', '3sta',
+        'ard', 'das_erste', 'one', 'ard_alpha',
+        'ndr', 'mdr', 'wdr', 'swr', 'rbb',
+        'hr', 'br', 'sr',
+        'funk', 'kika'
+      ]
       const filterIds = [ ...state.ignoredMovieIds, ...state.doneMovieIds, ...state.scheduledIds ]
       sortedList = sortedList.filter(movie => filterIds.indexOf(movie.id) === -1)
-      sortedList = _.compact(_.uniq(sortedList.map(movie => movie.channel)).sort())
+      sortedList = _.compact(_.uniq(sortedList.map(movie => movie.channel)))
+      sortedList = _.intersection(channelOrder, sortedList)
       return sortedList
     },
     availableMovies (state) {

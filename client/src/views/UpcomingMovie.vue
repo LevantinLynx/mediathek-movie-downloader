@@ -26,7 +26,7 @@
       <div class="info box">
         <header>
           <img :src="'/logo/' + movie.channel + '.svg'"
-            :height="movie.channel === 'arte' ? '16px' : '22px'"
+            :height="['arte', 'ard', 'zdf'].indexOf(movie.channel) > -1 ? '16px' : '22px'"
             :alt="movie.channel + ' Logo'"
             loading="lazy">
           <p>{{ movie.preText }}</p>

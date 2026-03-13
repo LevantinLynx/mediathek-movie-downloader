@@ -1,11 +1,11 @@
 <template>
   <aside class="menu" :class="{ pwaMode: settingsStore.isLaunchedAsApp, ios: settingsStore.isIosStandalone }">
-    <transition>
+    <Transition>
     <aside id="connectionStatus" v-if="!state.connected">
       <IconShieldFail />
       <span>Keine Verbindung zum Server.</span>
     </aside>
-    </transition>
+    </Transition>
     <div id="menu">
       <nav>
         <RouterLink to="/upcoming" aria-label="Verfügbare Filme" :class="{ 'active': upcomingRouteSelected }">
@@ -99,9 +99,6 @@ const settingsRouteSelected = computed(() => route.fullPath.indexOf('/settings')
   --icon-size: 5rem;
   width: var(--icon-size);
   height: var(--icon-size);
-}
-#subMenu {
-  padding-bottom: 1rem;
 }
 
 #connectionStatus {
