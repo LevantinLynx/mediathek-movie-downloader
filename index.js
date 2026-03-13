@@ -12,7 +12,8 @@ const {
 } = require('./src/scheduler.js')
 const {
   sleep,
-  sendNotificationToClients
+  sendNotificationToClients,
+  generateTestNotifications
 } = require('./src/helperFunctions.js')
 
 io.on('connection', async socket => {
@@ -32,6 +33,8 @@ io.on('connection', async socket => {
         socket.emit('bannerNotification', runningNotificationsCache[notificationIDs[i]])
       }
     }
+
+    if (process.env.NODE_ENV === 'development') generateTestNotifications()
   }
 
   socket.on('getInitialData', () => sendInitialData())

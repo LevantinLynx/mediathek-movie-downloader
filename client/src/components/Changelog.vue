@@ -6,13 +6,19 @@
   <section class="info">
     <h2>Changelog</h2>
 
+    <h4>2026.3.13</h4>
+    <ul>
+      <li>Frontend Reorganisierung</li>
+      <li>Optimierung der Benachrichtigungen</li>
+    </ul>
+
     <h4>2026.3.11</h4>
     <ul>
       <li>PWA Erkennung und Styling</li>
-      <li>Fehlerbehebung bei der movie.nfo erstellung</li>
+      <li>Fehlerbehebung bei der movie.nfo Erstellung</li>
       <li>Ignore &amp; Erledigt Liste auf 8 begrenzt</li>
       <li>Style Anpassungen</li>
-      <li>Typo fixes</li>
+      <li>Typo Fixes</li>
     </ul>
 
     <h4>2026.3.8</h4>

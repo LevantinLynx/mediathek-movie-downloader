@@ -515,6 +515,37 @@ function generateIdFromInput (input) {
     .substring(0, 10)
 }
 
+function generateTestNotifications () {
+  const testNotifications = false
+  if (!testNotifications) return
+  const notifications = []
+  const text = [
+    'Lorem ipsum dolor sit, amet consectetur adipisicing elit. Reiciendis?',
+    'Lorem ipsum dolor sit amet consectetur.',
+    'Lorem, ipsum dolor sit amet consectetur adipisicing elit. Accusamus, natus vel? Quaerat, ad quam. Perferendis.'
+  ]
+
+  notifications.push({ msg: text[getRandomInteger(0, text.length - 1)], state: 'running' })
+  notifications.push({ msg: 'INFO ' + text[getRandomInteger(0, text.length - 1)], result: 'info' })
+  notifications.push({ msg: 'SUCCESS ' + text[getRandomInteger(0, text.length - 1)], result: 'success' })
+  notifications.push({ msg: 'ERROR ' + text[getRandomInteger(0, text.length - 1)], result: 'error' })
+  notifications.push({ msg: 'SYNC INFO ' + text[getRandomInteger(0, text.length - 1)], result: 'info', type: 'sync' })
+  notifications.push({ msg: 'SYNC SUCCESS ' + text[getRandomInteger(0, text.length - 1)], result: 'success', type: 'sync' })
+  notifications.push({ msg: 'SYNC ERROR ' + text[getRandomInteger(0, text.length - 1)], result: 'error', type: 'sync' })
+
+  // TIMED NOTIFICATIONS
+  notifications.push({ msg: 'INFO ' + text[getRandomInteger(0, text.length - 1)], result: 'info', time: getRandomInteger(90_000, 300_000) })
+  notifications.push({ msg: 'SUCCESS ' + text[getRandomInteger(0, text.length - 1)], result: 'success', time: getRandomInteger(90_000, 300_000) })
+  notifications.push({ msg: 'ERROR ' + text[getRandomInteger(0, text.length - 1)], result: 'error', time: getRandomInteger(90_000, 300_000) })
+  notifications.push({ msg: 'SYNC INFO ' + text[getRandomInteger(0, text.length - 1)], result: 'info', type: 'sync', time: getRandomInteger(90_000, 300_000) })
+  notifications.push({ msg: 'SYNC SUCCESS ' + text[getRandomInteger(0, text.length - 1)], result: 'success', type: 'sync', time: getRandomInteger(90_000, 300_000) })
+  notifications.push({ msg: 'SYNC ERROR ' + text[getRandomInteger(0, text.length - 1)], result: 'error', type: 'sync', time: getRandomInteger(90_000, 300_000) })
+
+  for (let i = 0; i < notifications.length; i++) {
+    sendNotificationToClients(notifications[i])
+  }
+}
+
 module.exports = {
   sendNotificationToClients,
   sanitizeFileAndDirNames,
@@ -526,6 +557,8 @@ module.exports = {
   getIso639Info,
   cacheImageAndGenerateCachedLink,
   generateIdFromInput,
+
+  generateTestNotifications,
 
   axiosWithTimeouts
 }
