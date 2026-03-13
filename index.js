@@ -168,6 +168,7 @@ async function initializeServer () {
 
   // Start express server
   server.listen(process.env.SERVER_PORT || 12345, '0.0.0.0', () => {
+    logger.info(`[SERVER VERSION] ${version}`)
     logger.info(`[SERVER] http/ws server listening on http://0.0.0.0:${process.env.SERVER_PORT || 12345}`)
   })
 
