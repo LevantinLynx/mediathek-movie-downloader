@@ -80,7 +80,7 @@ io.on('connection', async socket => {
       sendNotificationToClients({
         result: 'success',
         msg: `Download für "${status.title || info.movieID}" geplant.`,
-        time: 5000
+        time: 2000
       })
     }
   })
