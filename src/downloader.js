@@ -54,12 +54,13 @@ async function checkForScheduledDownloads () {
 async function downloadMovie (movie) {
   try {
     if (!movie.extraInfo?.downloadTitle) throw new Error('No download title provided!')
+    const settings = await db.getAllSettings()
     await db.setScheduleEntryInProgress(movie, true)
 
     movie.baseDownloadPath = path.join(__dirname, '..', 'downloads', sanitizeFileAndDirNames(movie.extraInfo.downloadTitle))
     logger.debug('[DOWNLAODER] baseDownloadPath', movie.baseDownloadPath)
 
-    await generateNfoFileForMovie(movie)
+    if (settings.generateNfoFile) await generateNfoFileForMovie(movie)
 
     // Download movie via yt-dlp
     await ytDlpDownloader(movie)

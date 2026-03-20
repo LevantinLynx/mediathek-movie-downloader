@@ -19,6 +19,7 @@ export const useSettingsStore = defineStore('settings', {
       movieSortOrder: 'date',
 
       fileAndFolderNaming: 'jellyfin',
+      generateNfoFile: false,
 
       enableImageCaching: true,
 
