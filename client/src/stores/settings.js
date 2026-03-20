@@ -64,11 +64,7 @@ export const useSettingsStore = defineStore('settings', {
       return window.matchMedia('(display-mode: minimal-ui)').matches
     },
     isLaunchedAsApp (state) {
-      return ( // App mode if any of these are true
-        state.isIosStandalone ||
-        state.isStandalone ||
-        state.isMinimalUI
-      )
+      return state.isIosStandalone || state.isStandalone || state.isMinimalUI
     },
   }
 })
