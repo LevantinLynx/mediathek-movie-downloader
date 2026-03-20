@@ -20,7 +20,7 @@
               stroke="var(--bg1)" stroke-width="2"
             ></circle>
             <circle cx="50%" cy="50%" r="42" shape-rendering="geometricPrecision" fill="none"
-              stroke="var(--purpleBright)" stroke-width="4"
+              stroke="var(--purple)" stroke-width="4"
               :stroke-dashoffset="downloadProgress[movie.id]?.percent ? (264-264/100*downloadProgress[movie.id]?.percent) : 1"
               stroke-dasharray="264" stroke-linecap="round"
               style="transform:rotate(-90deg);transform-origin: 50% 50%;"
