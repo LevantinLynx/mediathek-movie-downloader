@@ -1,6 +1,6 @@
 <template>
   <section id="extraInfo" class="extraInfo">
-    <h1>Nützliche Infos &amp; Skripte</h1>
+    <h1>Infos &amp; Skripte</h1>
     <article class="script box">
       <header>
         <h2>Sprach- &amp; Ländercodes</h2>

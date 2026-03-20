@@ -6,6 +6,13 @@
   <section class="info">
     <h2>Changelog</h2>
 
+    <h4>2026.3.20</h4>
+    <ul>
+      <li>movie.nfo Generierung jetzt optional</li>
+      <li>TV-Sender Reihenfolge geändert</li>
+      <li>Version wird nun im Log ausgegeben</li>
+    </ul>
+
     <h4>2026.3.13</h4>
     <ul>
       <li>Frontend Reorganisierung</li>
