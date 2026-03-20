@@ -4,7 +4,7 @@
 
 Nachdem man in Deutschland sowieso Rundfunkbeitrag bezahlt, dachte ich mir: Warum das Angebot nicht nutzen, und eine private Sammlung der verfügbaren Filme in Jellyfin, Plex oder Ähnlichem anlegen? Da das Ganze manuell doch sehr aufwendig ist, vor allem, wenn mehrere Tonspuren, Untertitel etc. in einer Datei zusammengefasst und richtig benannt werden sollen, ist Automation genau das richtige.
 
-![Mediathek Movie Downloader WebApp](https://i.imgur.com/y11L7iC.png)
+![Mediathek Movie Downloader WebApp](https://i.imgur.com/4Ez1Nh2.png)
 
 ## WebApp
 
