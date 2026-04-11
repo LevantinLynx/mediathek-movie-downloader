@@ -265,6 +265,7 @@ article {
   aspect-ratio: var(--aspectRatio);
   object-fit: cover;
   transition: opacity 250ms ease-in-out;
+  width: 100%;
 }
 .cardImage .timeSpecialInfo {
   position: absolute;

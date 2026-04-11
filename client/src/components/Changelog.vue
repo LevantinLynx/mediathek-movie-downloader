@@ -6,6 +6,11 @@
   <section class="info">
     <h2>Changelog</h2>
 
+    <h4>2026.4.12</h4>
+    <ul>
+      <li>Fehler bei kleinen Bildern in der Filmliste behoben</li>
+    </ul>
+
     <h4>2026.3.20</h4>
     <ul>
       <li>movie.nfo Generierung jetzt optional</li>
