@@ -18,7 +18,7 @@ async function getUpcomingMoviesFromEpg () {
   try {
     const epgCache = await getEpgCacheData('arte')
 
-    const baseEpgUrl = 'https://www.arte.tv/api/rproxy/emac/v4/de/web/pages/TV_GUIDE/?day='
+    const baseEpgUrl = 'https://api.arte.tv/api/emac/v4/de/web/pages/TV_GUIDE/?day='
     const today = new Date()
     const epgDays = 14
     for (let i = 0; i <= epgDays; i++) {
@@ -68,11 +68,11 @@ async function getUpcomingMoviesFromEpg () {
 }
 
 function getMoviesFromEpgJSON (epgJSON) {
-  if (epgJSON.tag !== 'Ok' || epgJSON?.value?.zones?.length < 1) return []
+  if (epgJSON.code !== 'TV_GUIDE' || epgJSON.zones?.length < 1) return []
 
   let epgMovies = []
   let zoneData = []
-  const zones = epgJSON.value.zones
+  const zones = epgJSON.zones
   for (let i = 0; i < zones.length; i++) {
     zoneData = [...zoneData, ...(zones[i]?.content?.data || [])]
   }

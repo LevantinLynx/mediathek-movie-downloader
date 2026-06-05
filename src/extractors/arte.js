@@ -121,7 +121,7 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
 
 async function getAllDataFromPaginatedApi () {
   // API version of this page "https://www.arte.tv/de/videos/kino/filme/"
-  let currentApiUrl = 'https://www.arte.tv/api/rproxy/emac/v4/de/web/zones/a114e45f-eb3f-4868-b4d7-dff9fc8df592/content?abv=B&authorizedCountry=DE&page=0&pageId=SUBCATEGORY_FLM&zoneIndexInPage=0'
+  let currentApiUrl = 'https://api-cdn.arte.tv/api/emac/v4/de/web/zones/a114e45f-eb3f-4868-b4d7-dff9fc8df592/content?authorizedCountry=DE&page=1'
   let rawData = []
 
   try {
@@ -136,16 +136,17 @@ async function getAllDataFromPaginatedApi () {
         }
       })
 
-      if (currentRequestresponse?.tag !== 'Ok') {
+      if (currentRequestresponse?.data) rawData = [...rawData, ...currentRequestresponse.data]
+      else {
         logger.info(currentRequestresponse, ua)
         throw new Error(`Api request for "${currentApiUrl}" failed!`)
       }
-      if (currentRequestresponse?.value?.data) rawData = [...rawData, ...currentRequestresponse.value.data]
 
       logger.debug(`[API ARTE] DONE ${currentApiUrl}`)
+      await sleep(getRandomInteger(250, 375))
 
-      if (currentRequestresponse.value.pagination.page === currentRequestresponse.value.pagination.pages) done = true
-      else currentApiUrl = `https://www.arte.tv/api/rproxy/emac/v4/de/web/zones/a114e45f-eb3f-4868-b4d7-dff9fc8df592/content?abv=B&authorizedCountry=DE&page=${currentRequestresponse.value.pagination.page + 1}&pageId=SUBCATEGORY_FLM&zoneIndexInPage=0`
+      if (currentRequestresponse.pagination.page === currentRequestresponse.pagination.pages) done = true
+      else currentApiUrl = `https://api-cdn.arte.tv/api/emac/v4/de/web/zones/a114e45f-eb3f-4868-b4d7-dff9fc8df592/content?authorizedCountry=DE&page=${currentRequestresponse.pagination.page + 1}`
     }
   } catch (err) {
     logger.error(err)

@@ -6,6 +6,11 @@
   <section class="info">
     <h2>Changelog</h2>
 
+    <h4>2026.6.5</h4>
+    <ul>
+      <li>Änderung der Arte API übernommen</li>
+    </ul>
+
     <h4>2026.4.12</h4>
     <ul>
       <li>Fehler bei kleinen Bildern in der Filmliste behoben</li>
