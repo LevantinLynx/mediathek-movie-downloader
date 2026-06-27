@@ -7,6 +7,13 @@
     <h2>Changelog</h2>
 
     <div class="scrollWrapper">
+      <h4>2026.6.27</h4>
+      <ul>
+        <li>Änderungen an der 3sat API übernommen.</li>
+        <li>Verfügbarkeit Text bei Filmen von 3sat behoben.</li>
+        <li>Info zu Jahr, Schauspieler &amp; Crew bei ZDF, arte und 3sat hinzugefügt.</li>
+      </ul>
+
       <h4>2026.6.5</h4>
       <ul>
         <li>Änderung der Arte API übernommen</li>
