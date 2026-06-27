@@ -101,7 +101,7 @@ async function normalizeMovieData (rawMovieData, cachedImageFileHashList, active
       maturityContentRating !== 'none'
     ) movie.restrictions.push(maturityContentRating)
 
-    if (availableTo) movie.preText = `Video verfügbar bis ${formatDate(movieDate, 'dd.MM.yyyy')}`
+    if (availableTo) movie.preText = `bis ${formatDate(movieDate, 'dd.MM.yyyy')}`
 
     if (binaryFeatures && binaryFeatures.length > 0) movie.features = binaryFeatures
 

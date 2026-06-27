@@ -77,7 +77,7 @@ async function getMoviesFromEpgJSON (epgJSON) {
   for (let i = 0; i < zones.length; i++) {
     zoneData = [...zoneData, ...(zones[i]?.content?.data || [])]
   }
-  zoneData.filter(entry => entry?.genre?.label === 'Filme')
+  zoneData = zoneData.filter(entry => entry?.genre?.label === 'Filme')
 
   for (let i = 0; i < zoneData.length; i++) {
     epgMovies.push(await normalizeEpgMovieData(zoneData[i]))

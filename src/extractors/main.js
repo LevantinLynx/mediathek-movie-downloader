@@ -103,9 +103,10 @@ async function getExtractorMovies (channelExtractor, activeChannels, cachedImage
     channelApiData = channelApiData.filter(movie => activeAndValidChannels.indexOf(movie.channel) > -1)
     for (let i = 0; i < channelApiData.length; i++) {
       const movie = channelApiData[i]
+      if (movie.preText) movie.preText = movie.preText.replace('Video verfügbar ', '').replace('Verfügbar ', '')
       const hash = generateIdFromInput(movie.apiID)
       cache[hash] = {
-        ...channelApiData[i],
+        ...movie,
         id: hash
       }
       delete cache[hash].apiID
