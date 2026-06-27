@@ -34,7 +34,7 @@ async function getUpcomingMoviesFromEpg () {
         })
         logger.debug(`[API ARTE] EPG REQUEST FOR DAY DONE "${epgDayString}"`)
 
-        const epgMovieData = getMoviesFromEpgJSON(epgJSON)
+        const epgMovieData = await getMoviesFromEpgJSON(epgJSON)
 
         // add epg data to cache to avoid redownloading the same data
         epgCache[epgDayString] = epgMovieData
@@ -168,7 +168,7 @@ async function getUpcomingMovieApiIDs () {
       movieUrls.map(movie => movie.match(/\/({fr|de|en|es|it|pl})\/videos\/(\d{6}-\d{3}-[AF])/)?.[2])
     )
     logger.debug('[ARTE EPG] Movie IDs:', movieIDs)
-    logger.debug(`[ARTE EPG] Found "${movieIDs.length} movie IDs."`)
+    logger.debug(`[ARTE EPG] Found "${movieIDs.length}" movie IDs.`)
     logger.debug('[ARTE EPG] DONE! Getting upcoming movies from DOM.')
     return movieIDs
   } catch (err) {
