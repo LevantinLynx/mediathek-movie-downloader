@@ -7,7 +7,7 @@
     <transition mode="out-in">
     <div :key="'movie_' + movie.id">
     <header class="mainHeader">
-      <h1>{{ movie.title }}</h1>
+      <h1>{{ movie.title }}<small v-if="movie.year"> ({{ movie.year }})</small></h1>
       <div>
         <a class="button" @click="$router.go(-1)" title="Zurück">
           <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -44,6 +44,10 @@
           <div class="features" v-if="movie.features">
             <span>Merkmale</span>
             <span v-for="feature in movie.features">{{ feature }}</span>
+          </div>
+          <div class="country" v-if="movie.country">
+            <span>Land</span>
+            <span>{{ movie.country }}</span>
           </div>
           <div class="combi">
             <div class="restrictions" v-if="movie.restrictions">
@@ -137,9 +141,37 @@
         </div>
       </div>
 
-      <div class="description box">
+      <div class="description box" v-if="movie.description">
+        <header>
+          <h2>Beschreibung</h2>
+        </header>
         <p>{{ movie.description }}</p>
-        <p v-if="movie.imgAlt">{{ movie.imgAlt }}</p>
+        <p v-if="movie.imgAlt && !movie.description">{{ movie.imgAlt }}</p>
+      </div>
+
+      <div class="actorsAndCrew">
+        <div class="movieAdditionalInfo box" v-if="movie.actorDetails">
+          <header>
+            <h2>Schauspieler</h2>
+          </header>
+          <ul class="actors">
+            <li v-for="actor in movie.actorDetails" v-show="actor.name">
+              {{ actor.name }}<br>
+              <small v-if="actor.role">als {{ actor.role }}</small>
+            </li>
+          </ul>
+        </div>
+        <div class="movieAdditionalInfo box" v-if="movie.crewDetails">
+          <header>
+            <h2>Crew</h2>
+          </header>
+          <ul class="crew">
+            <li v-for="crew in movie.crewDetails" v-show="crew.name">
+              {{ crew.name }}<br>
+              <small v-if="crew.function">{{ crew.function }}</small>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <Transition mode="out-in">
@@ -152,10 +184,8 @@
         </header>
         <div class="matcherSuggestions" v-if="!movieMatcherSuggestions?.movieID">
           <div style="font-size: 2rem;" v-if="suggestionLoading === 'loading'" key="imdb_loading">
-            <svg style="height: 1em; width: 1.6em;margin-right: .8rem;" xmlns="http://www.w3.org/2000/svg" viewBox="12 6 74 74" preserveAspectRatio="xMidYMid">
-              <path fill="none" ng-attr-stroke="{{config.stroke}}" ng-attr-stroke-width="{{config.width}}" ng-attr-stroke-dasharray="{{config.dasharray}}" d="M24.3,30C11.4,30,5,43.3,5,50s6.4,20,19.3,20c19.3,0,32.1-40,51.4-40 C88.6,30,95,43.3,95,50s-6.4,20-19.3,20C56.4,70,43.6,30,24.3,30z" stroke="currentColor" stroke-width="7" stroke-dasharray="159.08513549804687 97.50379272460938">
-                <animate attributeName="stroke-dashoffset" calcMode="linear" values="0;256.58892822265625" keyTimes="0;1" dur="1" begin="0s" repeatCount="indefinite"></animate>
-              </path>
+            <svg class="loader" style="height: 1em; width: 1.6em;margin-right: .8rem;" xmlns="http://www.w3.org/2000/svg" viewBox="12 6 74 74" preserveAspectRatio="xMidYMid">
+              <path fill="none" d="M24.3,30C11.4,30,5,43.3,5,50s6.4,20,19.3,20c19.3,0,32.1-40,51.4-40 C88.6,30,95,43.3,95,50s-6.4,20-19.3,20C56.4,70,43.6,30,24.3,30z" stroke="currentColor" stroke-width="7" stroke-dasharray="159.08513549804687 97.50379272460938"></path>
             </svg>Suche läuft …
           </div>
           <div v-else-if="suggestionLoading === 'none'" key="imdb_request">
@@ -246,10 +276,8 @@
         </header>
         <div class="matcherSuggestions" v-if="!movieMatcherSuggestions?.movieID">
           <div style="font-size: 2rem;" v-if="suggestionLoading === 'loading'" key="tmdb_loading">
-            <svg style="height: 1em; width: 1.6em;margin-right: .8rem;" xmlns="http://www.w3.org/2000/svg" viewBox="12 6 74 74" preserveAspectRatio="xMidYMid">
-              <path fill="none" ng-attr-stroke="{{config.stroke}}" ng-attr-stroke-width="{{config.width}}" ng-attr-stroke-dasharray="{{config.dasharray}}" d="M24.3,30C11.4,30,5,43.3,5,50s6.4,20,19.3,20c19.3,0,32.1-40,51.4-40 C88.6,30,95,43.3,95,50s-6.4,20-19.3,20C56.4,70,43.6,30,24.3,30z" stroke="currentColor" stroke-width="7" stroke-dasharray="159.08513549804687 97.50379272460938">
-                <animate attributeName="stroke-dashoffset" calcMode="linear" values="0;256.58892822265625" keyTimes="0;1" dur="1" begin="0s" repeatCount="indefinite"></animate>
-              </path>
+            <svg class="loader" style="height: 1em; width: 1.6em;margin-right: .8rem;" xmlns="http://www.w3.org/2000/svg" viewBox="12 6 74 74" preserveAspectRatio="xMidYMid">
+              <path fill="none" d="M24.3,30C11.4,30,5,43.3,5,50s6.4,20,19.3,20c19.3,0,32.1-40,51.4-40 C88.6,30,95,43.3,95,50s-6.4,20-19.3,20C56.4,70,43.6,30,24.3,30z" stroke="currentColor" stroke-width="7" stroke-dasharray="159.08513549804687 97.50379272460938"></path>
             </svg>Suche läuft …
           </div>
           <div v-else-if="suggestionLoading === 'none'" key="tmdb_request">
@@ -431,7 +459,8 @@ const movieInfoAvailable = computed(() => {
     movie?.value?.subLangs ||
     movie?.value?.features ||
     movie?.value?.restrictions ||
-    movie?.value?.duration
+    movie?.value?.duration ||
+    movie?.value?.year
   )
 })
 
@@ -571,6 +600,7 @@ article .box {
 .restrictions,
 .combi,
 .extra,
+.country,
 .features {
   display: flex;
   gap: .8rem;
@@ -580,6 +610,7 @@ article .box {
   background-color: var(--purple);
   color: #000;
 }
+.country span:first-child,
 .langs span:first-child {
   background-color: var(--bgLight3);
   color: #000;
@@ -798,6 +829,18 @@ article .box {
   display: grid;
   gap: 2rem;
 }
+.loader path {
+  animation: animate-dash 1s linear infinite;
+}
+
+@keyframes animate-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 256.58892822265625;
+  }
+}
 .suggestion {
   background-position: bottom center;
   background-repeat: no-repeat;
@@ -902,15 +945,30 @@ article .box {
 }
 .box.description {
   grid-column: span 8;
-
-  -webkit-box-shadow: unset;
-  -moz-box-shadow: unset;
-  box-shadow: unset;
-  background-color: unset;
-  border-radius: unset;
-  padding: 0;
-  overflow: unset;
 }
+.box.movieAdditionalInfo {
+  width: 100%;
+}
+
+.actorsAndCrew {
+  grid-column: span 8;
+  display: flex;
+  flex-direction: row;
+  gap: var(--gap);
+}
+.actorsAndCrew ul {
+  display: grid;
+  gap: 2rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+.actorsAndCrew small {
+  font-size: 1.5rem;
+  font-style: italic;
+}
+.actorsAndCrew .crew small {
+  text-transform: capitalize;
+}
+
 .matcherSelection {
   grid-column: span 8;
 }
@@ -955,6 +1013,9 @@ article .box {
   .box.action {
     grid-template-columns: unset;
     gap: 2.6rem;
+  }
+  .actorsAndCrew {
+    flex-direction: column;
   }
 }
 @media  (width <= 560px) {

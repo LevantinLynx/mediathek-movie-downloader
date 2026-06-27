@@ -16,6 +16,7 @@ async function initialize () {
   try {
     // Initialize all databases
     logger.info('[DB] Initializing databases...')
+    db.movieExtraInfo = await new Datastore({ filename: path.join(databaseDirPath, 'movieExtraInfo.db'), autoload: true })
     db.schedule = await new Datastore({ filename: path.join(databaseDirPath, 'schedule_v2.db'), autoload: true })
     db.metaData = await new Datastore({ filename: path.join(databaseDirPath, 'metaData_v2.db'), autoload: true })
     db.epgCache = await new Datastore({ filename: path.join(databaseDirPath, 'epgCache.db'), autoload: true })
@@ -228,6 +229,41 @@ function clearEpgCache () {
         reject(err)
       } else {
         logger.info('[DB] EPG cache cleared …', numRemoved)
+        resolve()
+      }
+    })
+  })
+}
+
+async function getMovieExtraInfoCacheData (movieID) {
+  if (!movieID) logger.error('[DB] getExtraInfoCacheData: No movieID provided!')
+  const epgCacheData = await db.movieExtraInfo.findAsync({ id: movieID })
+  return epgCacheData || []
+}
+
+function updateMovieExtraInfoCacheData (cacheData) {
+  if (cacheData?.id) {
+    cacheData.lastUpdate = new Date()
+    db.movieExtraInfo.updateAsync({
+      id: cacheData.id
+    }, cacheData, {
+      upsert: true
+    })
+    logger.debug(`[DB] MOVIE EXTRA INFO CACHE UPDATE DONE: "${cacheData.id}"`)
+  } else {
+    logger.info('[DB] MOVIE EXTRA INFO CACHE UPDATE FAILED: No cache data provided.')
+  }
+}
+
+function clearMovieExtraInfoCache () {
+  return new Promise((resolve, reject) => {
+    logger.debug('[DB] Clearing MOVIE EXTRA INFO cache …')
+    db.movieExtraInfo.remove({}, { multi: true }, (err, numRemoved) => {
+      if (err) {
+        logger.info('[DB] MOVIE EXTRA INFO ERROR while clearing cache …')
+        reject(err)
+      } else {
+        logger.info('[DB] MOVIE EXTRA INFO cache cleared …', numRemoved)
         resolve()
       }
     })
@@ -730,6 +766,11 @@ module.exports = {
   getEpgCacheData,
   updateEpgCacheData,
   clearEpgCache,
+
+  // MOVIE EXTRA DATA
+  getMovieExtraInfoCacheData,
+  updateMovieExtraInfoCacheData,
+  clearMovieExtraInfoCache,
 
   // SCHEDULE
   addScheduleEntry,

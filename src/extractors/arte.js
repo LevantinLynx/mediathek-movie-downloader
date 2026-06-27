@@ -10,6 +10,7 @@ const {
   axiosWithTimeouts: axios
 } = require('../helperFunctions.js')
 const { getUpcomingMoviesFromEpg } = require('./epg/arteEPG.js')
+const nextParser = require('./nextParser.js')
 
 const extractor = {
   scrapeMovieData: scrapeArteCinemaMovieData,
@@ -39,6 +40,9 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
     for (let i = 0; i < movieApiData.length; i++) {
       if (!movieApiData[i]?.data?.attributes) continue
       const { metadata, rights, streams, warnings } = movieApiData[i].data.attributes
+
+      const additionalMovieInfo = await nextParser.getAdditionalMovieInfo(metadata.link.url, metadata.providerId)
+
       const movieObject = {
         title: metadata.title,
         url: metadata.link.url,
@@ -53,6 +57,12 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
         channel: 'arte'
       }
 
+      if (additionalMovieInfo.actors) movieObject.actorDetails = additionalMovieInfo.actors.slice(0, 6)
+      if (additionalMovieInfo.crew) movieObject.crewDetails = additionalMovieInfo.crew.slice(0, 6)
+      if (additionalMovieInfo.year) movieObject.year = additionalMovieInfo.year
+      if (additionalMovieInfo.genre) movieObject.genre = additionalMovieInfo.genre
+      if (additionalMovieInfo.country) movieObject.country = additionalMovieInfo.country
+
       if (rights?.begin) {
         const now = new Date()
         const start = new Date(rights.begin)
@@ -63,13 +73,13 @@ async function scrapeArteCinemaMovieData (cachedImageFileHashList) {
             date: end,
             type: 'untill'
           }
-          movieObject.preText = `Video verfügbar bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
+          movieObject.preText = `bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
         } else {
           movieObject.time = {
             date: start,
             type: 'from'
           }
-          movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
+          movieObject.preText = `ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
         }
       }
 

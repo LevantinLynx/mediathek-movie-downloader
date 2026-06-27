@@ -13,6 +13,7 @@ const {
   getEpgCacheData,
   updateEpgCacheData
 } = require('../../database.js')
+const nextParser = require('../nextParser.js')
 
 async function getUpcomingMoviesFromEpg () {
   try {
@@ -67,7 +68,7 @@ async function getUpcomingMoviesFromEpg () {
   }
 }
 
-function getMoviesFromEpgJSON (epgJSON) {
+async function getMoviesFromEpgJSON (epgJSON) {
   if (epgJSON.code !== 'TV_GUIDE' || epgJSON.zones?.length < 1) return []
 
   let epgMovies = []
@@ -76,10 +77,10 @@ function getMoviesFromEpgJSON (epgJSON) {
   for (let i = 0; i < zones.length; i++) {
     zoneData = [...zoneData, ...(zones[i]?.content?.data || [])]
   }
-  zoneData.filter(entry => entry?.genre?.label === 'Filme')
+  zoneData = zoneData.filter(entry => entry?.genre?.label === 'Filme')
 
   for (let i = 0; i < zoneData.length; i++) {
-    epgMovies.push(normalizeEpgMovieData(zoneData[i]))
+    epgMovies.push(await normalizeEpgMovieData(zoneData[i]))
   }
 
   epgMovies = _.compact(epgMovies)
@@ -87,11 +88,12 @@ function getMoviesFromEpgJSON (epgJSON) {
   return epgMovies
 }
 
-function normalizeEpgMovieData (movieData) {
+async function normalizeEpgMovieData (movieData) {
   try {
+    const additionalMovieInfo = await nextParser.getAdditionalMovieInfo(movieData.url, movieData.programId)
     const movieObject = {
       title: movieData.title,
-      url: `https://arte.tv${movieData.url}`,
+      url: movieData.url,
       img: getCleanThumbnailUrl(movieData.mainImage.url) || '',
       description: movieData.teaserText,
       time: {},
@@ -99,6 +101,12 @@ function normalizeEpgMovieData (movieData) {
       apiID: movieData.programId,
       channel: 'arte'
     }
+
+    if (additionalMovieInfo.actors) movieObject.actorDetails = additionalMovieInfo.actors.slice(0, 6)
+    if (additionalMovieInfo.crew) movieObject.crewDetails = additionalMovieInfo.crew.slice(0, 6)
+    if (additionalMovieInfo.year) movieObject.year = additionalMovieInfo.year
+    if (additionalMovieInfo.genre) movieObject.genre = additionalMovieInfo.genre
+    if (additionalMovieInfo.country) movieObject.country = additionalMovieInfo.country
 
     if (movieData.availability) {
       const now = new Date()
@@ -110,13 +118,13 @@ function normalizeEpgMovieData (movieData) {
           date: end,
           type: 'untill'
         }
-        movieObject.preText = `Video verfügbar bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
+        movieObject.preText = `bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
       } else {
         movieObject.time = {
           date: start,
           type: 'from'
         }
-        movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
+        movieObject.preText = `ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
       }
     }
 
