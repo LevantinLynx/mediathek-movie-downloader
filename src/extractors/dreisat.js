@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const path = require('path')
 const logger = require('../logger.js')
 const { formatDate } = require('date-fns')
 const { parseHTML } = require('linkedom')
@@ -37,12 +38,18 @@ async function scrape3satMovieData (cachedImageFileHashList) {
           logger.error(`[3SAT API] Error while processing videoID "${videoID}".`)
           continue
         }
-        const mainVideoContent = movieApiData.mainVideoContent?.['http://zdf.de/rels/target']
+        if (movieApiData && process.env.NODE_ENV === 'development') {
+          await Bun.write(path.join(__dirname, '..', '..', 'debug_info', `3SAT_${videoID}.json`), JSON.stringify(movieApiData))
+        }
+
+        const movieProgrammeItem = movieApiData.programmeItem?.[0]?.['http://zdf.de/rels/target']
 
         const thumbnail = (
           movieApiData.teaserImageRef.layouts['1280x720'] ||
           movieApiData.teaserImageRef.layouts['1920x1080'] ||
-          movieApiData.teaserImageRef.layouts['768x432']
+          movieApiData.teaserImageRef.layouts['768x432'] ||
+          movieProgrammeItem?.['http://zdf.de/rels/image']?.layouts?.['1280x720'] ||
+          movieProgrammeItem?.['http://zdf.de/rels/image']?.layouts?.['1920x1080']
         )
 
         const movieObject = {
@@ -52,50 +59,135 @@ async function scrape3satMovieData (cachedImageFileHashList) {
             thumbnail,
             cachedImageFileHashList
           ),
-          imgAlt: movieApiData.teaserImageRef.altText,
-          description: movieApiData.leadParagraph,
+          imgAlt: (
+            movieApiData.teaserImageRef.altText ||
+            movieProgrammeItem?.['http://zdf.de/rels/image']?.altText
+          ),
+          description: (
+            movieProgrammeItem?.text ||
+            movieApiData.leadParagraph ||
+            ''
+          ).replace(/<[^>]*>/g, ' ').replace(/\s/g, ' '),
           time: {},
           restrictions: [],
           apiID: videoID,
           channel: '3sat'
         }
 
-        if (mainVideoContent?.duration) {
-          movieObject.duration = `${Math.ceil(mainVideoContent?.duration / 60)} min`
+        const now = new Date()
+
+        if (movieProgrammeItem) {
+          // Actor info
+          if (movieProgrammeItem.actorDetails?.actorDetail?.length > 0) {
+            movieObject.actorDetails = movieProgrammeItem.actorDetails.actorDetail.slice(0, 6)
+          }
+          // Crew info
+          if (movieProgrammeItem.crewDetails?.crewDetail?.length > 0) {
+            movieObject.crewDetails = movieProgrammeItem.crewDetails.crewDetail.slice(0, 6)
+          }
+          // Country info
+          if (movieProgrammeItem.country) {
+            movieObject.country = movieProgrammeItem.country.trim()
+          }
+          // Genre info
+          if (movieProgrammeItem.genre) {
+            movieObject.genre = movieProgrammeItem.genre.trim()
+          }
+          // FSK info
+          if (
+            movieProgrammeItem.fsk &&
+            movieProgrammeItem.fsk !== 'none'
+          ) {
+            movieObject.restrictions.push(`FSK${movieProgrammeItem.fsk}`.toUpperCase())
+          } else if (movieProgrammeItem.jugendeignung) {
+            movieObject.restrictions.push(`FSK${movieProgrammeItem.jugendeignung}`.toUpperCase())
+          }
+          // Original title of movie
+          if (movieProgrammeItem.originalTitle) movieObject.originalTitle = movieProgrammeItem.originalTitle
+          // Movie year info
+          if (movieProgrammeItem.year) movieObject.year = movieProgrammeItem.year
+          else if (movieProgrammeItem.subtitle.match(/\d{4}/)) {
+            movieObject.year = movieProgrammeItem.subtitle.match(/\d{4}/)[0]
+          }
+
+          if (movieProgrammeItem['http://zdf.de/rels/cmdm/broadcasts']?.length > 0) {
+            const relevantBroadcasts = movieProgrammeItem['http://zdf.de/rels/cmdm/broadcasts']
+              .filter(broadcast => {
+                if (broadcast.onlineFrom && now < new Date(broadcast.onlineFrom)) return true
+                if (broadcast.onlineTo && now < new Date(broadcast.onlineTo)) return true
+
+                return false
+              })
+
+            const currentBroadcast = relevantBroadcasts[0]
+            if (currentBroadcast) {
+              if (currentBroadcast.duration) {
+                movieObject.duration = `${Math.ceil(currentBroadcast?.duration / 60)} min`
+              }
+              if (currentBroadcast.geolocationVOD) {
+                movieObject.geoLock = currentBroadcast.geolocationVOD
+              }
+
+              const onlineFrom = currentBroadcast.onlineFrom
+                ? new Date(currentBroadcast.onlineFrom)
+                : null
+              const onlineTo = currentBroadcast.onlineTo
+                ? new Date(currentBroadcast.onlineTo)
+                : null
+
+              if (onlineFrom && now < onlineFrom) {
+                movieObject.time = {
+                  date: onlineFrom,
+                  type: 'from'
+                }
+                movieObject.preText = `ab ${formatDate(onlineFrom, 'dd.MM.yyyy HH:mm')}`
+              } else if (onlineTo && now < onlineTo) {
+                movieObject.time = {
+                  date: onlineTo,
+                  type: 'untill'
+                }
+                movieObject.preText = `bis ${formatDate(onlineTo, 'dd.MM.yyyy HH:mm')}`
+              }
+
+              if (currentBroadcast.geolocationVOD?.toLowerCase().indexOf('dach') > -1) {
+                movieObject.preText += ' in Deutschland, Österreich & Schweiz'
+              } else if (currentBroadcast.geolocationVOD?.toLowerCase().indexOf('d') > -1) {
+                movieObject.preText += ' in Deutschland'
+              } else if (currentBroadcast.geolocationVOD?.toLowerCase().indexOf('a') > -1) {
+                movieObject.preText += ' in Österreich'
+              } else if (currentBroadcast.geolocationVOD?.toLowerCase().indexOf('ch') > -1) {
+                movieObject.preText += ' in der Schweiz'
+              }
+            }
+          }
         }
 
-        const now = new Date()
-        if (
-          mainVideoContent?.visible &&
-          mainVideoContent?.visibleTo &&
-          new Date(mainVideoContent.visibleTo) > now
-        ) {
-          const start = mainVideoContent.visibleFrom ? new Date(mainVideoContent.visibleFrom) : null
-          const end = mainVideoContent.visibleTo ? new Date(mainVideoContent.visibleTo) : null
+        const mainVideoContent = movieApiData.mainVideoContent?.['http://zdf.de/rels/target']
+        if (mainVideoContent) {
+          if (!movieObject.duration && mainVideoContent.duration) {
+            movieObject.duration = `${Math.ceil(mainVideoContent?.duration / 60)} min`
+          }
 
-          if (end && end < now) {
-            const start = new Date(movieApiData.editorialDate)
-            movieObject.time = {
-              date: start,
-              type: 'from'
-            }
-            movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
-          } else if (
-            (start && now > start) ||
-            (!start && end && now < end)
-          ) {
-            movieObject.time = {
-              date: end,
-              type: 'untill'
-            }
-            movieObject.preText = `Video verfügbar bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
-          } else if (start) {
-            if (start > now) {
+          if (!movieObject.time.date) {
+            const visibleFrom = mainVideoContent.visibleFrom
+              ? new Date(mainVideoContent.visibleFrom)
+              : null
+            const visibleTo = mainVideoContent.visibleTo
+              ? new Date(mainVideoContent.visibleTo)
+              : null
+
+            if (visibleFrom && now < visibleFrom) {
               movieObject.time = {
-                date: start,
+                date: visibleFrom,
                 type: 'from'
               }
-              movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
+              movieObject.preText = `ab ${formatDate(visibleFrom, 'dd.MM.yyyy HH:mm')}`
+            } else if (visibleTo && now < visibleTo) {
+              movieObject.time = {
+                date: visibleTo,
+                type: 'untill'
+              }
+              movieObject.preText = `bis ${formatDate(visibleTo, 'dd.MM.yyyy HH:mm')}`
             } else {
               // Asume infinite availability
               const date = new Date(`${now.getFullYear() + 50}-01-01T00:00:00.000+01:00`)
@@ -103,45 +195,17 @@ async function scrape3satMovieData (cachedImageFileHashList) {
                 date,
                 type: 'untill'
               }
-              movieObject.preText = `Video verfügbar bis ${formatDate(date, 'dd.MM.yyyy HH:mm')}`
+              movieObject.preText = `bis ${formatDate(date, 'dd.MM.yyyy HH:mm')}`
             }
           }
-        } else if (
-          movieApiData?.endDate &&
-          new Date(movieApiData.endDate) > now
-        ) {
-          const end = new Date(movieApiData.endDate)
-          movieObject.time = {
-            date: end,
-            type: 'untill'
-          }
-          movieObject.preText = `Video verfügbar bis ${formatDate(end, 'dd.MM.yyyy HH:mm')}`
-        } else if (movieApiData.editorialDate) {
-          const start = new Date(movieApiData.editorialDate)
-          if (start > now) {
-            movieObject.time = {
-              date: start,
-              type: 'from'
-            }
-            movieObject.preText = `Video verfügbar ab ${formatDate(start, 'dd.MM.yyyy HH:mm')}`
-          } else {
-            // Asume infinite availability
-            const date = new Date(`${now.getFullYear() + 50}-01-01T00:00:00.000+01:00`)
-            movieObject.time = {
-              date,
-              type: 'untill'
-            }
-            movieObject.preText = `Video verfügbar bis ${formatDate(date, 'dd.MM.yyyy HH:mm')}`
-          }
-        }
 
-        // if (streams.length > 0) {
-        //   movieObject.audioLangs = getAudioLanguages(streams)
-        //   movieObject.subLangs = getSubtitleLanguages(streams)
-        // }
-
-        if (mainVideoContent?.fsk && mainVideoContent?.fsk !== 'none') {
-          movieObject.restrictions.push(`${mainVideoContent.fsk}`.toLocaleUpperCase())
+          if (
+            !movieProgrammeItem.fsk &&
+            mainVideoContent?.fsk &&
+            mainVideoContent?.fsk !== 'none'
+          ) {
+            movieObject.restrictions.push(`${mainVideoContent.fsk}`.toUpperCase())
+          }
         }
 
         if (movieObject.restrictions.length === 0) delete movieObject.restrictions
