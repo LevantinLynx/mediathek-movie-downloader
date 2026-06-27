@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const path = require('path')
 const logger = require('../logger.js')
 const {
   formatDate,
@@ -15,6 +16,7 @@ const {
 const {
   getAllSettings
 } = require('../database.js')
+const nextParser = require('./nextParser.js')
 
 const extractor = {
   scrapeMovieData: scrapeZdfMovieData,
@@ -70,6 +72,9 @@ async function scrapeZdfMovieData (cachedImageFileHashList) {
         } else {
           const movieApiData = await getMovieInfoFromApi(movieIDs[i])
           if (!movieApiData) continue
+          else if (process.env.NODE_ENV === 'development') {
+            await Bun.write(path.join(__dirname, '..', '..', 'debug_info', `ZDF_${movieIDs[i]}.json`), JSON.stringify(movieApiData))
+          }
           const movie = await normalizeMovieData(movieApiData, graphqlDataLookupTable[movieIDs[i]], cachedImageFileHashList)
           if (movie) movieList.push(movie)
         }
@@ -179,6 +184,13 @@ async function normalizeMovieData (rawMovieData, rawGrapthQlData, cachedImageFil
       features: []
     }
 
+    const additionalMovieInfo = await nextParser.getAdditionalMovieInfo(movie.url, movie.apiID)
+
+    if (additionalMovieInfo.actors) movie.actorDetails = additionalMovieInfo.actors.slice(0, 6)
+    if (additionalMovieInfo.crew) movie.crewDetails = additionalMovieInfo.crew.slice(0, 6)
+    if (additionalMovieInfo.year) movie.year = additionalMovieInfo.year
+    if (additionalMovieInfo.genre) movie.genre = additionalMovieInfo.genre
+
     // Set features
     if (graphqlInfo.videoInfo.ad) movie.features.push('AD')
     if (graphqlInfo.videoInfo.uhd) movie.features.push('4K UHD')
@@ -193,13 +205,13 @@ async function normalizeMovieData (rawMovieData, rawGrapthQlData, cachedImageFil
       movie.time.date = legacyInfo.availableFrom
       movie.time.type = 'from'
     } else if (graphqlInfo.availableFrom && new Date() < new Date(graphqlInfo.availableFrom)) {
-      movie.preText = `Verfügbar ab ${formatDate(new Date(graphqlInfo.availableFrom), 'dd.MM.yyyy')}`
+      movie.preText = `ab ${formatDate(new Date(graphqlInfo.availableFrom), 'dd.MM.yyyy')}`
       movie.date = graphqlInfo.availableFrom
       movie.time.type = 'from'
     } else if (legacyInfo.availabilityInfo && legacyInfo.availabilityInfo.indexOf('verfügbar bis') > -1) {
       movie.preText = legacyInfo.availabilityInfo
     } else if (graphqlInfo.availableTo) {
-      movie.preText = `Verfügbar bis ${formatDate(new Date(graphqlInfo.availableTo), 'dd.MM.yyyy')}`
+      movie.preText = `bis ${formatDate(new Date(graphqlInfo.availableTo), 'dd.MM.yyyy')}`
     } else {
       logger.error('[API ZDF] Movie has no preText!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
     }
