@@ -30,7 +30,7 @@ export const useMovieStore = defineStore('movie', {
       let sortedList = Object.values(state.availableMovieMetaData)
       const channelOrder = [
         'zdf', 'zdfneo', 'zdftivi',
-        'arte', '3sta',
+        'arte', '3sat',
         'ard', 'das_erste', 'one', 'ard_alpha',
         'ndr', 'mdr', 'wdr', 'swr', 'rbb',
         'hr', 'br', 'sr',

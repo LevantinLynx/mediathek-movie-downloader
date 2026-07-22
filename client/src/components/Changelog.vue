@@ -7,6 +7,11 @@
     <h2>Changelog</h2>
 
     <div class="scrollWrapper">
+      <h4>2026.7.22</h4>
+      <ul>
+        <li>3sat taucht nun wieder im Filter der Übersicht auf.</li>
+      </ul>
+
       <h4>2026.6.27</h4>
       <ul>
         <li>Änderungen an der 3sat API übernommen.</li>
