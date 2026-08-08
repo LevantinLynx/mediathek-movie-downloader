@@ -7,6 +7,11 @@
     <h2>Changelog</h2>
 
     <div class="scrollWrapper">
+      <h4>2026.8.8</h4>
+      <ul>
+        <li>Regex update für ZDF api key extraktion.</li>
+      </ul>
+
       <h4>2026.7.22</h4>
       <ul>
         <li>3sat taucht nun wieder im Filter der Übersicht auf.</li>

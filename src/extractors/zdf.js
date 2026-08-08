@@ -278,7 +278,7 @@ async function getApiKeyFromWebsite () {
 
     if (!currentRequestResponse?.indexOf('<!DOCTYPE html><html lang="de">') === -1) throw new Error(`Error while extracting API KEY from "${websiteUrl}"`)
 
-    const apiKeyRegex = /\\"apiToken\\":\\"([a-zA-Z0-9]{32,64})\\",\\"contentServiceBaseUrl\\":\\"https:\/\/api\.zdf\.de\\"/
+    const apiKeyRegex = /\\"apiToken\\":\\"([a-zA-Z0-9]{32,64})\\",\\"expiresAt\\":/
     const regexMatchResult = currentRequestResponse.match(apiKeyRegex)
     const apiKey = regexMatchResult?.[1]
 
